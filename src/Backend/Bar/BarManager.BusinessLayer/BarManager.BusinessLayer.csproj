@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\IdentityProvider\IdentityProvider.Contracts\IdentityProvider.Contracts.csproj" />
+    <ProjectReference Include="..\..\IdentityProvider\IdentityProvider.Shared\IdentityProvider.Shared.csproj" />
+    <ProjectReference Include="..\BarManager.DataAccessLayer\BarManager.DataAccessLayer.csproj" />
+    <ProjectReference Include="..\BarManager.Shared\BarManager.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
