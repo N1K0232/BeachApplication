@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BeachApplication.Clients\BeachApplication.Clients.csproj" />
+    <ProjectReference Include="..\BeachApplication.Contracts\BeachApplication.Contracts.csproj" />
+    <ProjectReference Include="..\BeachApplication.DataAccessLayer\BeachApplication.DataAccessLayer.csproj" />
+    <ProjectReference Include="..\BeachApplication.StorageProviders\BeachApplication.StorageProviders.csproj" />
+  </ItemGroup>
+
+</Project>
