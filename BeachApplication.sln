@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Logging", 
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Database", "src\BeachApplication.Database\BeachApplication.Database.sqlproj", "{F1CE5243-C917-4737-AF8D-4D6D834B27CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.DataProtectionLayer", "src\BeachApplication.DataProtectionLayer\BeachApplication.DataProtectionLayer.csproj", "{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,6 +78,10 @@ Global
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
