@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="OperationResultTools" Version="1.0.25" />
+    <PackageReference Include="TinyHelpers" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BeachApplication.Clients\BeachApplication.Clients.csproj" />
     <ProjectReference Include="..\BeachApplication.Contracts\BeachApplication.Contracts.csproj" />
     <ProjectReference Include="..\BeachApplication.DataAccessLayer\BeachApplication.DataAccessLayer.csproj" />
