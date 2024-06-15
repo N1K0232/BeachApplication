@@ -8,27 +8,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication", "src\BeachApplication\BeachApplication.csproj", "{40DCD31B-FC26-40AE-8573-52E4362239DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication", "src\BeachApplication\BeachApplication.csproj", "{40DCD31B-FC26-40AE-8573-52E4362239DB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.BusinessLayer", "src\BeachApplication.BusinessLayer\BeachApplication.BusinessLayer.csproj", "{6E971CE8-FE7A-4022-95FB-72D42A7BD5CA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.BusinessLayer", "src\BeachApplication.BusinessLayer\BeachApplication.BusinessLayer.csproj", "{6E971CE8-FE7A-4022-95FB-72D42A7BD5CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Authentication", "src\BeachApplication.Authentication\BeachApplication.Authentication.csproj", "{C8E7B3AA-963E-4DE0-9377-8CE114CBCDC1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Authentication", "src\BeachApplication.Authentication\BeachApplication.Authentication.csproj", "{C8E7B3AA-963E-4DE0-9377-8CE114CBCDC1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.DataAccessLayer", "src\BeachApplication.DataAccessLayer\BeachApplication.DataAccessLayer.csproj", "{DD585C7F-46D6-47ED-BF80-4A2B2660351A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.DataAccessLayer", "src\BeachApplication.DataAccessLayer\BeachApplication.DataAccessLayer.csproj", "{DD585C7F-46D6-47ED-BF80-4A2B2660351A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Contracts", "src\BeachApplication.Contracts\BeachApplication.Contracts.csproj", "{E43D3453-FAA8-440E-8EA4-8D0D0CE1C0BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Contracts", "src\BeachApplication.Contracts\BeachApplication.Contracts.csproj", "{E43D3453-FAA8-440E-8EA4-8D0D0CE1C0BD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Shared", "src\BeachApplication.Shared\BeachApplication.Shared.csproj", "{F1C9B7E6-2F09-4CA1-898E-02F35BD85FC0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Shared", "src\BeachApplication.Shared\BeachApplication.Shared.csproj", "{F1C9B7E6-2F09-4CA1-898E-02F35BD85FC0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.StorageProviders", "src\BeachApplication.StorageProviders\BeachApplication.StorageProviders.csproj", "{029AEAEB-8C9C-4016-AED7-D7FAE2227EAC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.StorageProviders", "src\BeachApplication.StorageProviders\BeachApplication.StorageProviders.csproj", "{029AEAEB-8C9C-4016-AED7-D7FAE2227EAC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Clients", "src\BeachApplication.Clients\BeachApplication.Clients.csproj", "{1D2FE1BC-F7C5-4D3D-A0FE-AF051EEBC2C4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Clients", "src\BeachApplication.Clients\BeachApplication.Clients.csproj", "{1D2FE1BC-F7C5-4D3D-A0FE-AF051EEBC2C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Logging", "src\BeachApplication.Logging\BeachApplication.Logging.csproj", "{50CA13C8-8CD1-4BEC-943F-4D6B68E26037}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Logging", "src\BeachApplication.Logging\BeachApplication.Logging.csproj", "{50CA13C8-8CD1-4BEC-943F-4D6B68E26037}"
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Database", "src\BeachApplication.Database\BeachApplication.Database.sqlproj", "{F1CE5243-C917-4737-AF8D-4D6D834B27CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.DataProtectionLayer", "src\BeachApplication.DataProtectionLayer\BeachApplication.DataProtectionLayer.csproj", "{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.DataProtectionLayer", "src\BeachApplication.DataProtectionLayer\BeachApplication.DataProtectionLayer.csproj", "{13108357-F37F-4B11-8ACD-0D3C8B24BCEA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
