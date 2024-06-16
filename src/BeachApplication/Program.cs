@@ -14,6 +14,7 @@ using BeachApplication.DataAccessLayer;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
+using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
 using Hangfire;
 using Hangfire.SqlServer;
@@ -33,6 +34,7 @@ using Polly.Retry;
 using Polly.Timeout;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
+using TinyHelpers.Extensions;
 using TinyHelpers.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -260,6 +262,23 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     });
 
     services.AddHangfireServer();
+
+    var azureStorageConnectionString = configuration.GetConnectionString("AzureStorageConnection");
+    if (azureStorageConnectionString.HasValue() && appSettings.ContainerName.HasValue())
+    {
+        services.AddAzureStorage(options =>
+        {
+            options.ConnectionString = azureStorageConnectionString;
+            options.ContainerName = appSettings.ContainerName;
+        });
+    }
+    else
+    {
+        services.AddFileSystemStorage(options =>
+        {
+            options.StorageFolder = appSettings.StorageFolder;
+        });
+    }
 
     services.AddScoped<IIdentityService, IdentityService>();
     services.AddScoped<IMeService, MeService>();
