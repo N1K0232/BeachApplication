@@ -10,6 +10,7 @@ using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
+using BeachApplication.DataAccessLayer;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
@@ -178,25 +179,10 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddTransient<TransientErrorDelegatingHandler>();
     services.AddHttpClient("http").AddHttpMessageHandler<TransientErrorDelegatingHandler>();
-
     services.AddFluentEmail(sendinblueSettings.EmailAddress).WithSendinblue();
 
-    services.AddHangfire(options =>
-    {
-        options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-            .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(configuration.GetConnectionString("SqlConnection"), new SqlServerStorageOptions
-            {
-                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                QueuePollInterval = TimeSpan.Zero,
-                UseRecommendedIsolationLevel = true,
-                DisableGlobalLocks = true
-            });
-    });
-
-    services.AddHangfireServer();
+    services.AddSqlServer<ApplicationDbContext>(configuration.GetConnectionString("SqlConnection"));
+    services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
 
     services.AddSqlServer<AuthenticationDbContext>(configuration.GetConnectionString("SqlConnection"));
     services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -257,6 +243,23 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
             policy.Requirements.Add(new UserActiveRequirement());
         });
     });
+
+    services.AddHangfire(options =>
+    {
+        options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(configuration.GetConnectionString("SqlConnection"), new SqlServerStorageOptions
+            {
+                CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                QueuePollInterval = TimeSpan.Zero,
+                UseRecommendedIsolationLevel = true,
+                DisableGlobalLocks = true
+            });
+    });
+
+    services.AddHangfireServer();
 
     services.AddScoped<IIdentityService, IdentityService>();
     services.AddScoped<IMeService, MeService>();
