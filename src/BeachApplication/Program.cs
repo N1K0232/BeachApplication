@@ -6,8 +6,8 @@ using BeachApplication.Authentication;
 using BeachApplication.Authentication.Entities;
 using BeachApplication.Authentication.Handlers;
 using BeachApplication.Authentication.Requirements;
+using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Services;
-using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.DataAccessLayer;
@@ -51,9 +51,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 {
     var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
     var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
-
     var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings));
     var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings));
+
+    var sqlConnectionString = configuration.GetConnectionString("SqlConnection");
+    var azureStorageConnectionString = configuration.GetConnectionString("AzureStorageConnection");
 
     var administratorUserSettingsSection = configuration.GetSection(nameof(AdministratorUserSettings));
     var powerUserSettingsSection = configuration.GetSection(nameof(PowerUserSettings));
@@ -91,6 +93,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
             context.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
         };
     });
+
+    services.AddAutoMapper(typeof(ImageMapperProfile).Assembly);
 
     services.AddOperationResult(options =>
     {
@@ -183,10 +187,10 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     services.AddHttpClient("http").AddHttpMessageHandler<TransientErrorDelegatingHandler>();
     services.AddFluentEmail(sendinblueSettings.EmailAddress).WithSendinblue();
 
-    services.AddSqlServer<ApplicationDbContext>(configuration.GetConnectionString("SqlConnection"));
+    services.AddSqlServer<ApplicationDbContext>(sqlConnectionString);
     services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
 
-    services.AddSqlServer<AuthenticationDbContext>(configuration.GetConnectionString("SqlConnection"));
+    services.AddSqlServer<AuthenticationDbContext>(sqlConnectionString);
     services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
         options.User.RequireUniqueEmail = true;
@@ -251,7 +255,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
             .UseSimpleAssemblyNameTypeSerializer()
             .UseRecommendedSerializerSettings()
-            .UseSqlServerStorage(configuration.GetConnectionString("SqlConnection"), new SqlServerStorageOptions
+            .UseSqlServerStorage(sqlConnectionString, new SqlServerStorageOptions
             {
                 CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
                 SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
@@ -263,7 +267,6 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddHangfireServer();
 
-    var azureStorageConnectionString = configuration.GetConnectionString("AzureStorageConnection");
     if (azureStorageConnectionString.HasValue() && appSettings.ContainerName.HasValue())
     {
         services.AddAzureStorage(options =>
@@ -280,8 +283,10 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         });
     }
 
-    services.AddScoped<IIdentityService, IdentityService>();
-    services.AddScoped<IMeService, MeService>();
+    services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
+        .AddClasses(classes => classes.InNamespaceOf<IdentityService>())
+        .AsImplementedInterfaces()
+        .WithScopedLifetime());
 
     services.AddHostedService<IdentityRoleService>();
     services.AddHostedService<IdentityUserService>();
