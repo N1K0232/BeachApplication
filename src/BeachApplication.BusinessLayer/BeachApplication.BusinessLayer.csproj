@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+      <PackageReference Include="AutoMapper" Version="13.0.1" />
       <PackageReference Include="FluentEmail.MailKit" Version="3.0.2" />
       <PackageReference Include="OperationResultTools" Version="1.0.25" />
       <PackageReference Include="sib_api_v3_sdk" Version="4.0.2" />
