@@ -51,6 +51,7 @@
 
                 if (errorMessage == null) {
                     window.localStorage.setItem('access_token', content.accessToken);
+                    window.localStorage.setItem('refresh_token', content.refreshToken);
                     window.location.href = '/HomePage';
                 }
                 else {
@@ -90,6 +91,47 @@
                     alert(errorMessage);
                 }
 
+            } catch (error) {
+                alert(error);
+            }
+            finally {
+                this.isBusy = false;
+            }
+        },
+
+        refresh: async function () {
+            this.isBusy = true;
+
+            var accessToken = window.localStorage.getItem('access_token');
+            var refreshToken = window.localStorage.getItem('refresh_token');
+
+            try {
+                var request = {
+                    accessToken: accessToken,
+                    refreshToken: refreshToken
+                };
+
+                var response = await fetch("/api/auth/refresh", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept-Language": language
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                var content = await response.json();
+                var errorMessage = GetErrorMessage(response.status, content);
+
+                if (errorMessage == null) {
+                    window.localStorage.clear();
+                    window.localStorage.setItem('access_token', content.accessToken);
+                    window.localStorage.setItem('refresh_token', content.refreshToken);
+                    window.location.href = '/HomePage';
+                }
+                else {
+                    alert(errorMessage);
+                }
             } catch (error) {
                 alert(error);
             }

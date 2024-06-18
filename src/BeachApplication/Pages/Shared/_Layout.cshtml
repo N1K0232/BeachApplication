@@ -13,10 +13,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@($"{ViewData["Title"]} - {environment.ApplicationName}".Trim().TrimStart('-').Trim())</title>
 
+    <partial name="_Favicons" />
+    <partial name="_OpenGraph" />
+
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/box-icons/css/boxicons.min.css" asp-append-version="true" />
 
+    <link rel="stylesheet" href="~/lib/box-icons/css/boxicons.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
 
@@ -47,6 +50,7 @@
                     &copy; @author
                     <a class="nav-link nav-link-bottom ps-3" title="X" href="https://twitter.com/N1K0232" target="_blank"><i class="bi bi-twitter-x"></i></a>
                     <a class="nav-link nav-link-bottom ps-3" title="GitHub" href="https://github.com/N1K0232" target="_blank"><i class="bi bi-github"></i></a>
+                    <a class="nav-link nav-link-botton ps-3" title="Facebook" href="https://www.facebook.com/nicola.silvestri.3557" target="_blank"><i class="bi bi-facebook"></i></a>
                 </div>
                 <div class="nav col justify-content-end d-flex align-items-center">
                     <small>@version</small>

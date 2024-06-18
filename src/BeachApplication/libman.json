@@ -37,6 +37,10 @@
         {
             "library": "boxicons@2.1.4",
             "destination": "wwwroot/lib/box-icons"
+        },
+        {
+            "library": "ionicons@7.4.0",
+            "destination": "wwwroot/lib/ion-icons"
         }
     ]
 }

@@ -1,4 +1,4 @@
-[x-cloak] {
+﻿[x-cloak] {
     display: none !important;
 }
 
@@ -17,6 +17,8 @@ html {
 
 body {
     margin-bottom: 80px;
+    background: url('https://th.bing.com/th/id/R.ed1da6d7993cecf649e11c4a6e72f760?rik=SJO6yPN4OHWqSA&riu=http%3a%2f%2fhdqwalls.com%2fdownload%2f1%2fnature-beach-wallpaper.jpg&ehk=x%2fo%2bFJ78RQLzSKkEbsSR%2fyM2m%2fPyQraU1WDRYCV2KRg%3d&risl=&pid=ImgRaw&r=0') no-repeat;
+    background-position: center;
 }
 
 *:focus {
@@ -26,6 +28,7 @@ body {
 .navbar-brand {
     padding-top: 0px;
     padding-bottom: 0px;
+    background-color: transparent;
 }
 
 .footer {
