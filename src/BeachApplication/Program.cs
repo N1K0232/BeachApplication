@@ -6,7 +6,11 @@ using BeachApplication.Authentication;
 using BeachApplication.Authentication.Entities;
 using BeachApplication.Authentication.Handlers;
 using BeachApplication.Authentication.Requirements;
+using BeachApplication.BusinessLayer.Clients;
+using BeachApplication.BusinessLayer.Clients.Interfaces;
 using BeachApplication.BusinessLayer.Mapping;
+using BeachApplication.BusinessLayer.Providers;
+using BeachApplication.BusinessLayer.Providers.Interfaces;
 using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
@@ -59,9 +63,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     var administratorUserSettingsSection = configuration.GetSection(nameof(AdministratorUserSettings));
     var powerUserSettingsSection = configuration.GetSection(nameof(PowerUserSettings));
+    var translatorSettingsSection = configuration.GetSection(nameof(TranslatorSettings));
 
     services.Configure<AdministratorUserSettings>(administratorUserSettingsSection);
     services.Configure<PowerUserSettings>(powerUserSettingsSection);
+    services.Configure<TranslatorSettings>(translatorSettingsSection);
 
     services.AddRequestLocalization(appSettings.SupportedCultures);
     services.AddWebOptimizer(minifyCss: true, minifyJavaScript: environment.IsProduction());
@@ -282,6 +288,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
             options.StorageFolder = appSettings.StorageFolder;
         });
     }
+
+    services.AddHttpClient<IAzureTokenProvider, AzureTokenProvider>();
+    services.AddHttpClient<ITranslatorClient, TranslatorClient>();
 
     services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
         .AddClasses(classes => classes.InNamespaceOf<IdentityService>())
