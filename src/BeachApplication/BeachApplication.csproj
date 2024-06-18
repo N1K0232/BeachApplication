@@ -44,4 +44,34 @@
     <ProjectReference Include="..\BeachApplication.Logging\BeachApplication.Logging.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Resources\Pages\Errors\404.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>404.resx</DependentUpon>
+    </Compile>
+    <Compile Update="Resources\Pages\Errors\500.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>500.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Pages\Errors\404.it.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Pages\Errors\404.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>404.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Pages\Errors\500.it.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Pages\Errors\500.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>500.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

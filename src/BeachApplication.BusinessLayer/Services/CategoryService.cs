@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.Shared.Models;
@@ -35,10 +36,10 @@ public class CategoryService : ICategoryService
                 return Result.Ok();
             }
 
-            return Result.Fail(FailureReasons.ClientError, "No category deleted", "An error occurred. No category was deleted");
+            return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseDeleteError);
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, "No category found", $"No category found with id {id}");
+        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
     }
 
     public async Task<Result<Category>> GetAsync(Guid id)
@@ -50,7 +51,7 @@ public class CategoryService : ICategoryService
             return category;
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, "No category found", $"No category found with id {id}");
+        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
     }
 
     public async Task<Result<IEnumerable<Category>>> GetListAsync(string name, string description)
@@ -91,7 +92,7 @@ public class CategoryService : ICategoryService
             return savedCategory;
         }
 
-        return Result.Fail(FailureReasons.ClientError, "No category added", $"An error occurred. No category added");
+        return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseInsertError);
     }
 
     public async Task<Result<Category>> UpdateAsync(Guid id, SaveCategoryRequest request)
@@ -110,9 +111,9 @@ public class CategoryService : ICategoryService
                 return savedCategory;
             }
 
-            return Result.Fail(FailureReasons.ClientError, "No category updated", "An error occurred. No category was updated");
+            return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseUpdateError);
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, "No category found", $"No category found with id {id}");
+        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
     }
 }

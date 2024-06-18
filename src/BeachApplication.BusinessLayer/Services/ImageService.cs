@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using BeachApplication.BusinessLayer.Internal;
+using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.Shared.Models;
@@ -39,10 +40,10 @@ public class ImageService : IImageService
                 return Result.Ok();
             }
 
-            return Result.Fail(FailureReasons.ClientError, "No image deleted", "An error occurred. No image was deleted");
+            return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseDeleteError);
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, "No image found", $"No image found with id {id}");
+        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
     }
 
     public async Task<Result<Image>> GetAsync(Guid id)
@@ -54,15 +55,13 @@ public class ImageService : IImageService
             return image;
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, "No image found", $"No image found with id {id}");
+        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
     }
 
     public async Task<Result<IEnumerable<Image>>> GetListAsync()
     {
-        var images = await applicationDbContext.GetData<Entities.Image>()
-            .ProjectTo<Image>(mapper.ConfigurationProvider)
-            .OrderBy(i => i.Path)
-            .ToListAsync();
+        var query = applicationDbContext.GetData<Entities.Image>();
+        var images = await query.ProjectTo<Image>(mapper.ConfigurationProvider).OrderBy(i => i.Path).ToListAsync();
 
         return images;
     }
@@ -79,7 +78,7 @@ public class ImageService : IImageService
             }
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, "No image found", $"No image found with id {id}");
+        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
     }
 
     public async Task<Result<Image>> UploadAsync(string fileName, Stream stream, string description, bool overwrite)
@@ -104,6 +103,6 @@ public class ImageService : IImageService
             return savedImage;
         }
 
-        return Result.Fail(FailureReasons.ClientError, "No image was uploaded", "An error occurred. No image was uploaded");
+        return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseInsertError);
     }
 }
