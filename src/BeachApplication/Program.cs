@@ -22,6 +22,7 @@ using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
 using Hangfire;
 using Hangfire.SqlServer;
+using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -144,6 +145,10 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
             options.AddDefaultResponse();
             options.AddAcceptLanguageHeader();
             options.AddFormFile();
+        })
+        .AddFluentValidationRulesToSwagger(options =>
+        {
+            options.SetNotNullableIfMinLengthGreaterThenZero = true;
         });
     }
 
