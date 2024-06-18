@@ -1,4 +1,4 @@
-﻿using BeachApplication.Shared.Models.Translation;
+﻿using BeachApplication.Shared.Models.TranslationClient;
 
 namespace BeachApplication.Shared.Models.Responses;
 
