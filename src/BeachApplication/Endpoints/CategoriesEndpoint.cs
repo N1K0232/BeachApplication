@@ -1,4 +1,5 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
+using BeachApplication.Extensions;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.Routing;
@@ -40,6 +41,7 @@ public class CategoriesEndpoint : IEndpointRouteHandlerBuilder
 
         categoriesApiGroup.MapPost(string.Empty, InsertAsync)
             .RequireAuthorization("Administrator")
+            .WithValidator<SaveCategoryRequest>()
             .Produces<Category>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -50,6 +52,7 @@ public class CategoriesEndpoint : IEndpointRouteHandlerBuilder
 
         categoriesApiGroup.MapPut("{id:guid}", UpdateAsync)
             .RequireAuthorization("Administrator")
+            .WithValidator<SaveCategoryRequest>()
             .Produces<Category>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

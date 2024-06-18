@@ -14,12 +14,15 @@ using BeachApplication.BusinessLayer.Providers.Interfaces;
 using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
+using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
 using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
@@ -102,6 +105,12 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     });
 
     services.AddAutoMapper(typeof(ImageMapperProfile).Assembly);
+    services.AddValidatorsFromAssemblyContaining<SaveCategoryRequestValidator>();
+
+    services.AddFluentValidationAutoValidation(options =>
+    {
+        options.DisableDataAnnotationsValidation = true;
+    });
 
     services.AddOperationResult(options =>
     {
