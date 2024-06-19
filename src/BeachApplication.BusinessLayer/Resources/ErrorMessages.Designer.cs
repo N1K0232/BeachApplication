@@ -88,11 +88,29 @@ namespace BeachApplication.BusinessLayer.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to This {0} already exists.
+        /// </summary>
+        public static string EntityExists {
+            get {
+                return ResourceManager.GetString("EntityExists", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The field &apos;{PropertyName}&apos; is required.
         /// </summary>
         public static string FieldRequired {
             get {
                 return ResourceManager.GetString("FieldRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You inserted an invalid price.
+        /// </summary>
+        public static string InvalidPrice {
+            get {
+                return ResourceManager.GetString("InvalidPrice", resourceCulture);
             }
         }
         

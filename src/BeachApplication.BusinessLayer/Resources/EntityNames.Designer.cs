@@ -77,5 +77,14 @@ namespace BeachApplication.BusinessLayer.Resources {
                 return ResourceManager.GetString("Image", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Product.
+        /// </summary>
+        public static string Product {
+            get {
+                return ResourceManager.GetString("Product", resourceCulture);
+            }
+        }
     }
 }

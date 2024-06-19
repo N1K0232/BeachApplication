@@ -126,8 +126,14 @@
   <data name="DatabaseUpdateError" xml:space="preserve">
     <value>An error occurred. No row or table was updated</value>
   </data>
+  <data name="EntityExists" xml:space="preserve">
+    <value>This {0} already exists</value>
+  </data>
   <data name="FieldRequired" xml:space="preserve">
     <value>The field '{PropertyName}' is required</value>
+  </data>
+  <data name="InvalidPrice" xml:space="preserve">
+    <value>You inserted an invalid price</value>
   </data>
   <data name="ItemNotFound" xml:space="preserve">
     <value>No {0} found with id {1}</value>

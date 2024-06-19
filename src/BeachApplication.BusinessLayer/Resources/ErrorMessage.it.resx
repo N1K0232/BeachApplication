@@ -126,8 +126,14 @@
   <data name="DatabaseUpdateError" xml:space="preserve">
     <value>Si è verificato un errore imprevisto. Nessuna riga o tabella è stata modificata</value>
   </data>
+  <data name="EntityExists" xml:space="preserve">
+    <value>Questo {0} esiste già</value>
+  </data>
   <data name="FieldRequired" xml:space="preserve">
     <value>Il campo '{PropertyName}' è obbligatorio</value>
+  </data>
+  <data name="InvalidPrice" xml:space="preserve">
+    <value>Hai inserito un prezzo invalido</value>
   </data>
   <data name="ItemNotFound" xml:space="preserve">
     <value>Nessun {0} trovato con l'id {1}</value>

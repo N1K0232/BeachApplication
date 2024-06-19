@@ -123,4 +123,16 @@
   <data name="CategoryName" xml:space="preserve">
     <value>Category name</value>
   </data>
+  <data name="Price" xml:space="preserve">
+    <value>Price</value>
+  </data>
+  <data name="ProductDescription" xml:space="preserve">
+    <value>Product description</value>
+  </data>
+  <data name="ProductName" xml:space="preserve">
+    <value>Product name</value>
+  </data>
+  <data name="Quantity" xml:space="preserve">
+    <value>Quantity</value>
+  </data>
 </root>
