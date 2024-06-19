@@ -8,6 +8,7 @@ using BeachApplication.Authentication.Handlers;
 using BeachApplication.Authentication.Requirements;
 using BeachApplication.BusinessLayer.Clients;
 using BeachApplication.BusinessLayer.Clients.Interfaces;
+using BeachApplication.BusinessLayer.Clients.Refit;
 using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Providers;
 using BeachApplication.BusinessLayer.Providers.Interfaces;
@@ -40,6 +41,7 @@ using OperationResults.AspNetCore.Http;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
+using Refit;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
 using TinyHelpers.Extensions;
@@ -59,6 +61,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 {
     var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
     var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
+    var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(configuration, nameof(OpenWeatherMapSettings));
     var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings));
     var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings));
 
@@ -205,7 +208,21 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddTransient<TransientErrorDelegatingHandler>();
     services.AddHttpClient("http").AddHttpMessageHandler<TransientErrorDelegatingHandler>();
+
     services.AddFluentEmail(sendinblueSettings.EmailAddress).WithSendinblue();
+    services.AddRefitClient<IOpenWeatherMapClient>().ConfigureHttpClient(httpClient =>
+    {
+        httpClient.BaseAddress = new Uri(openWeatherMapSettings.SecurityKey);
+    })
+    .ConfigurePrimaryHttpMessageHandler(_ =>
+    {
+        var handler = new QueryStringInjectorHttpMessageHandler();
+        handler.Parameters.Add("units", "metric");
+        handler.Parameters.Add("lang", "IT");
+        handler.Parameters.Add("APPID", openWeatherMapSettings.ApiKey);
+
+        return handler;
+    });
 
     services.AddSqlServer<ApplicationDbContext>(sqlConnectionString);
     services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
