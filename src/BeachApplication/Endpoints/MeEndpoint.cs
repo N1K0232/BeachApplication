@@ -21,7 +21,7 @@ public class MeEndpoint : IEndpointRouteHandlerBuilder
 
     private static async Task<IResult> GetAsync(IMeService meService, HttpContext httpContext)
     {
-        var result = await meService.GetAsync();
+        var result = await meService.GetAsync(httpContext.User);
         return httpContext.CreateResponse(result);
     }
 }

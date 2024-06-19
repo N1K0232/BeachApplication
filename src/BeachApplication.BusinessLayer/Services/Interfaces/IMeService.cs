@@ -1,9 +1,10 @@
-﻿using BeachApplication.Shared.Models;
+﻿using System.Security.Claims;
+using BeachApplication.Shared.Models;
 using OperationResults;
 
 namespace BeachApplication.BusinessLayer.Services.Interfaces;
 
 public interface IMeService
 {
-    Task<Result<User>> GetAsync();
+    Task<Result<User>> GetAsync(ClaimsPrincipal principal);
 }
