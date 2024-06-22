@@ -131,5 +131,23 @@ namespace BeachApplication.BusinessLayer.Resources {
                 return ResourceManager.GetString("MaximumLength", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You can&apos;t insert a negative quantity.
+        /// </summary>
+        public static string NegativeQuantity {
+            get {
+                return ResourceManager.GetString("NegativeQuantity", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Not enough products.
+        /// </summary>
+        public static string NotEnoughProducts {
+            get {
+                return ResourceManager.GetString("NotEnoughProducts", resourceCulture);
+            }
+        }
     }
 }

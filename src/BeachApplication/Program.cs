@@ -20,10 +20,12 @@ using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
+using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
+using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
 using FluentValidation;
@@ -359,6 +361,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         .AddClasses(classes => classes.InNamespaceOf<IdentityService>())
         .AsImplementedInterfaces()
         .WithScopedLifetime());
+
+    services.AddScoped<IUserService, HttpUserService>();
 
     services.AddHostedService<IdentityRoleService>();
     services.AddHostedService<IdentityUserService>();

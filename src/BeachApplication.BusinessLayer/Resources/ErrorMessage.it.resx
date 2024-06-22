@@ -141,4 +141,10 @@
   <data name="MaximumLength" xml:space="preserve">
     <value>Il campo '{PropertyName}' ha una lunghezza massima di {MaximumLength}</value>
   </data>
+  <data name="NegativeQuantity" xml:space="preserve">
+    <value>Non puoi inserire una quantità negativa</value>
+  </data>
+  <data name="NotEnoughProducts" xml:space="preserve">
+    <value>Non ci sono abbastanza prodotti</value>
+  </data>
 </root>
