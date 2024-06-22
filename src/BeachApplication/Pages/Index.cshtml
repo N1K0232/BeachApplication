@@ -5,34 +5,3 @@
 @{
     ViewData["Title"] = "Home page";
 }
-
-<div class="login" x-data="auth">
-    <div class="text-center wrapper">
-        <form x-on:submit.prevent>
-            <div class="input-box">
-                <input type="text" x-model="userName" placeholder="UserName" />
-            </div>
-            <div class="input-box">
-                <input type="password" x-model="password" placeholder="Password" />
-            </div>
-            <div class="remember-forgot">
-                <label><input type="checkbox" x-model="isPersistent" />Remember me</label>
-                <a href="/ResetPassword">Forgot password?</a>
-            </div>
-            <div class="col-auto mt-3">
-                <button class="btn" type="submit" x-on:click="login()" x-bind:disabled="invalidLoginForm() || isBusy">Login</button>
-            </div>
-            <div class="register-link">
-                <p>Don't you have an account? <a href="/Register">Register</a></p>
-            </div>
-        </form>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        document.addEventListener("alpine:init", () => {
-            auth('@Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName');
-        });
-    </script>
-}

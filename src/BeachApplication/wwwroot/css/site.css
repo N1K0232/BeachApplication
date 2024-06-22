@@ -21,6 +21,19 @@ body {
     background-position: center;
 }
 
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px 100px;
+    background: transparent;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 99
+}
+
 *:focus {
     box-shadow: none !important;
 }
@@ -131,13 +144,13 @@ input[type="checkbox"] + label {
     margin-right: -.4em
 }
 
-    .btn-clipboard:hover {
-        color: var(--bs-link-hover-color)
-    }
+.btn-clipboard:hover {
+    color: var(--bs-link-hover-color)
+}
 
-    .btn-clipboard:focus {
-        z-index: 3
-    }
+.btn-clipboard:focus {
+    z-index: 3
+}
 
 .btn-clipboard {
     position: relative;

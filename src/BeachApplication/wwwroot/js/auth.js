@@ -1,7 +1,9 @@
 ﻿function auth(language) {
     Alpine.data("auth", () => ({
+        id: '',
         firstName: '',
         lastName: '',
+        fullName: '',
         email: '',
         userName: '',
         password: '',
@@ -11,8 +13,10 @@
         passwordErrorMessage: '',
 
         clear: function () {
+            this.id = '';
             this.firstName = '';
             this.lastName = '';
+            this.fullName = '';
             this.email = '';
             this.userName = '';
             this.password = '';
@@ -37,7 +41,7 @@
                     isPersistent: this.isPersistent
                 };
 
-                var response = await fetch("/api/auth/login", {
+                var response = await fetch('/api/auth/login', {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -52,7 +56,7 @@
                 if (errorMessage == null) {
                     window.localStorage.setItem('access_token', content.accessToken);
                     window.localStorage.setItem('refresh_token', content.refreshToken);
-                    window.location.href = '/HomePage';
+                    window.location.href = '/';
                 }
                 else {
                     alert(errorMessage);
@@ -83,8 +87,7 @@
                 var errorMessage = GetErrorMessage(response.status, content);
 
                 if (errorMessage == null) {
-                    this.firstName = content.firstName;
-                    this.lastName = content.lastName;
+                    this.fullName = `${content.firstName} ${content.lastName}`;
                     this.email = content.email;
                 }
                 else {
@@ -111,7 +114,7 @@
                     refreshToken: refreshToken
                 };
 
-                var response = await fetch("/api/auth/refresh", {
+                var response = await fetch('/api/auth/refresh', {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -127,7 +130,7 @@
                     window.localStorage.clear();
                     window.localStorage.setItem('access_token', content.accessToken);
                     window.localStorage.setItem('refresh_token', content.refreshToken);
-                    window.location.href = '/HomePage';
+                    window.location.href = '/';
                 }
                 else {
                     alert(errorMessage);
@@ -171,7 +174,7 @@
 
                 if (errorMessage == null) {
                     window.localStorage.setItem('verify_email_token', content.token);
-                    window.location.href = '/VerifyEmail';
+                    window.location.href = '/Accounts/VerifyEmail';
                 }
                 else {
                     alert(errorMessage);

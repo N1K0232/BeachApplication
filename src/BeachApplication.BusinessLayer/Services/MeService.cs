@@ -20,6 +20,6 @@ public class MeService : IMeService
     public async Task<Result<User>> GetAsync(ClaimsPrincipal principal)
     {
         var user = await userManager.FindByNameAsync(principal.GetUserName());
-        return new User(user.FirstName, user.LastName, user.Email);
+        return new User(user.Id, user.FirstName, user.LastName, user.Email);
     }
 }

@@ -1,0 +1,41 @@
+﻿@page
+
+@model ProfileModel
+
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div x-data="auth" x-cloak x-init="me()">
+    <div class="container mt-4 mb-4 p-3 d-flex justify-content-center">
+        <div class="card p-4">
+            <div class=" image d-flex flex-column justify-content-center align-items-center">
+                <button class="btnCard btn-secondary">
+                </button>
+                <span class="name mt-3" x-text="fullName"></span>
+                <span class="idd" x-text="email"></span>
+                <div class="d-flex flex-row justify-content-center align-items-center gap-2">
+                    <span class="idd1" x-text="id"></span>
+                    <span><i class="fa fa-copy"></i></span>
+                </div>
+                <div class="d-flex flex-row justify-content-center align-items-center mt-3">
+                    <span class="number">1069<span class="follow">Followers</span></span>
+                </div>
+                <div class=" d-flex mt-2">
+                    <button class="btnCard1 btn-dark">Edit Profile</button>
+                </div>
+                <div class="text mt-3">
+                    <span>Test</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("alpine:init", () => {
+            auth('@Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName');
+        });
+    </script>
+}
