@@ -85,6 +85,6 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
     private static async Task<IResult> VerifyEmailAsync(IIdentityService identityService, VerifyEmailRequest request, HttpContext httpContext)
     {
         var result = await identityService.VerifyEmailAsync(request);
-        return httpContext.CreateResponse<IResult>(result);
+        return httpContext.CreateResponse(result);
     }
 }

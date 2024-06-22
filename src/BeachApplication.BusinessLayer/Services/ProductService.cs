@@ -2,7 +2,6 @@
 using AutoMapper;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Shared.Collections;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;

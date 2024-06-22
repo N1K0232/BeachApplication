@@ -22,6 +22,8 @@ using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataProtectionLayer;
+using BeachApplication.DataProtectionLayer.Services;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
@@ -35,6 +37,7 @@ using Hangfire.SqlServer;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -102,8 +105,17 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     services.AddExceptionHandler<DbUpdateExceptionHandler>();
 
     services.AddRazorPages();
-
     services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql");
+
+    services.AddDataProtection().PersistKeysToDbContext<DataProtectionDbContext>();
+    services.AddScoped<IDataProtectionService, DataProtectionService>();
+    services.AddScoped(services =>
+    {
+        var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
+        var protector = dataProtectionProvider.CreateProtector("beachapplication");
+
+        return protector;
+    });
 
     services.ConfigureHttpJsonOptions(options =>
     {
@@ -261,6 +273,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         options.ConnectionString = sqlConnectionString;
     });
 
+    services.AddSqlServer<DataProtectionDbContext>(sqlConnectionString);
     services.AddSqlServer<AuthenticationDbContext>(sqlConnectionString);
     services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
