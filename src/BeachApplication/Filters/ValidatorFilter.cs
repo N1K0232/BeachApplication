@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Mvc;
 using OperationResults.AspNetCore.Http;
 
@@ -23,33 +24,40 @@ public class ValidatorFilter<T> : IEndpointFilter where T : class
             var validationResult = await validator.ValidateAsync(input);
             if (!validationResult.IsValid)
             {
+                var httpContext = context.HttpContext;
+                var contentType = "application/problem+json; charset=utf-8";
                 var statusCode = StatusCodes.Status400BadRequest;
+
                 var problemDetails = new ProblemDetails
                 {
                     Status = statusCode,
                     Type = $"https://httpstatuses.io/{statusCode}",
                     Title = "One or more validation errors occurred",
-                    Instance = context.HttpContext.Request.Path
+                    Instance = httpContext.Request.Path
                 };
 
-                problemDetails.Extensions["traceId"] = Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+                problemDetails.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+                LoadErrors(problemDetails, validationResult);
 
-                if (options.ErrorResponseFormat == ErrorResponseFormat.Default)
-                {
-                    problemDetails.Extensions["errors"] = validationResult.ToDictionary();
-                }
-                else
-                {
-                    var errors = validationResult.Errors.Select(e => new { Name = e.PropertyName, Message = e.ErrorMessage });
-                    problemDetails.Extensions["errors"] = errors;
-                }
-
-                return TypedResults.Json(problemDetails, statusCode: StatusCodes.Status400BadRequest, contentType: "application/problem+json; charset=utf-8");
+                return TypedResults.Json(problemDetails, statusCode: statusCode, contentType: contentType);
             }
 
             return await next(context);
         }
 
         return TypedResults.BadRequest();
+    }
+
+    private void LoadErrors(ProblemDetails problemDetails, ValidationResult validationResult)
+    {
+        if (options.ErrorResponseFormat == ErrorResponseFormat.Default)
+        {
+            problemDetails.Extensions["errors"] = validationResult.ToDictionary();
+        }
+        else
+        {
+            var errors = validationResult.Errors.Select(e => new { Name = e.PropertyName, Message = e.ErrorMessage });
+            problemDetails.Extensions["errors"] = errors;
+        }
     }
 }
