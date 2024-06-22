@@ -2,9 +2,9 @@
 
 public abstract class BaseEntity
 {
-    public Guid Id { get; set; }
+    public virtual Guid Id { get; set; }
 
-    public DateTime CreationDate { get; set; }
+    public virtual DateTime CreationDate { get; set; }
 
-    public DateTime? LastModificationDate { get; set; }
+    public virtual DateTime? LastModificationDate { get; set; }
 }
