@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-public class ProductConfiguration : DeletableEntityConfiguration<Product>
+internal class ProductConfiguration : DeletableEntityConfiguration<Product>
 {
     public override void Configure(EntityTypeBuilder<Product> builder)
     {
