@@ -27,6 +27,12 @@ public class SaveProductRequestValidator : AbstractValidator<SaveProductRequest>
             .NotEmpty()
             .WithMessage(ErrorMessages.FieldRequired);
 
+        RuleFor(p => p.Quantity)
+            .GreaterThan(0)
+            .When(p => p.Quantity is not null && p.Quantity.HasValue)
+            .WithName(PropertyNames.Quantity)
+            .WithMessage(ErrorMessages.NegativeQuantity);
+
         RuleFor(p => p.Price)
             .PrecisionScale(8, 2, true)
             .WithName(PropertyNames.Price)
