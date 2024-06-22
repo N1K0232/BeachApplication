@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using System.Data;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -47,7 +48,15 @@ public class IdentityService : IIdentityService
             var userRoles = await userManager.GetRolesAsync(user);
             await userManager.UpdateSecurityStampAsync(user);
 
-            var claims = await GetClaimsAsync(user, userRoles);
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.GivenName, user.FirstName),
+                new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.SerialNumber, user.SecurityStamp ?? string.Empty)
+            }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
             var response = CreateResponse(claims);
 
             user.RefreshToken = response.RefreshToken;
@@ -180,28 +189,6 @@ public class IdentityService : IIdentityService
         var refreshToken = Convert.ToBase64String(randomNumber);
 
         return new AuthResponse(accessToken, refreshToken);
-    }
-
-    private async Task<IEnumerable<Claim>> GetClaimsAsync(ApplicationUser user, IEnumerable<string> roles)
-    {
-        var userClaims = await userManager.GetClaimsAsync(user);
-        if (userClaims.Count > 0)
-        {
-            return userClaims;
-        }
-
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.GivenName, user.FirstName),
-            new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-            new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.SerialNumber, user.SecurityStamp ?? string.Empty)
-        }.Union(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-        await userManager.AddClaimsAsync(user, claims);
-        return claims;
     }
 
     private Task<ClaimsPrincipal> ValidateAsync(string accessToken)

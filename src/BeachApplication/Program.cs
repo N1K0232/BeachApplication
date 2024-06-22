@@ -42,6 +42,7 @@ using Polly;
 using Polly.Retry;
 using Polly.Timeout;
 using Refit;
+using Serilog;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
 using TinyHelpers.Extensions;
@@ -59,6 +60,11 @@ await app.RunAsync();
 
 void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostBuilder host, IWebHostEnvironment environment)
 {
+    host.UseSerilog((hostingContext, loggerConfiguration) =>
+    {
+        loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration ?? configuration);
+    });
+
     var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
     var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
     var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(configuration, nameof(OpenWeatherMapSettings));
@@ -379,6 +385,11 @@ void Configure(IApplicationBuilder app, IWebHostEnvironment environment, IServic
 
     app.UseAuthentication();
     app.UseAuthorization();
+
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.IncludeQueryInRequestPath = true;
+    });
 
     app.UseHangfireDashboard("/jobs");
     app.UseEndpoints(endpoints =>
