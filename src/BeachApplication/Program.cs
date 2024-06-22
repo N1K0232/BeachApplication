@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Mime;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using BeachApplication.Authentication;
 using BeachApplication.Authentication.Entities;
 using BeachApplication.Authentication.Handlers;
@@ -9,6 +12,7 @@ using BeachApplication.Authentication.Requirements;
 using BeachApplication.BusinessLayer.Clients;
 using BeachApplication.BusinessLayer.Clients.Interfaces;
 using BeachApplication.BusinessLayer.Clients.Refit;
+using BeachApplication.BusinessLayer.Diagnostics.HealthChecks;
 using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Providers;
 using BeachApplication.BusinessLayer.Providers.Interfaces;
@@ -29,8 +33,11 @@ using Hangfire.SqlServer;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
@@ -94,11 +101,25 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddRazorPages();
 
+    services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql");
+
     services.ConfigureHttpJsonOptions(options =>
     {
         options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
         options.SerializerOptions.Converters.Add(new UtcDateTimeConverter());
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+    services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter("beachapplication", options =>
+        {
+            options.PermitLimit = 5;
+            options.Window = TimeSpan.FromSeconds(30);
+            options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            options.QueueLimit = 2;
+        });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
     services.AddProblemDetails(options =>
@@ -233,6 +254,11 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     services.AddSqlServer<ApplicationDbContext>(sqlConnectionString);
     services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
 
+    services.AddSqlContext(options =>
+    {
+        options.ConnectionString = sqlConnectionString;
+    });
+
     services.AddSqlServer<AuthenticationDbContext>(sqlConnectionString);
     services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
@@ -366,6 +392,7 @@ void Configure(IApplicationBuilder app, IWebHostEnvironment environment, IServic
     {
         builder.UseExceptionHandler();
         builder.UseStatusCodePages();
+        builder.UseRateLimiter();
     });
 
     app.UseDefaultFiles();
@@ -394,6 +421,34 @@ void Configure(IApplicationBuilder app, IWebHostEnvironment environment, IServic
     app.UseHangfireDashboard("/jobs");
     app.UseEndpoints(endpoints =>
     {
+        endpoints.MapHealthChecks("/healthchecks", new HealthCheckOptions
+        {
+            ResultStatusCodes =
+            {
+                [HealthStatus.Healthy] = StatusCodes.Status200OK,
+                [HealthStatus.Degraded] = StatusCodes.Status200OK,
+                [HealthStatus.Unhealthy] = StatusCodes.Status400BadRequest
+            },
+            ResponseWriter = async (context, report) =>
+            {
+                var result = JsonSerializer.Serialize(
+                new
+                {
+                    status = report.Status.ToString(),
+                    duration = report.TotalDuration.TotalMilliseconds,
+                    details = report.Entries.Select(entry => new
+                    {
+                        service = entry.Key,
+                        status = entry.Value.Status.ToString(),
+                        description = entry.Value.Description,
+                        exception = entry.Value.Exception?.Message,
+                    })
+                });
+
+                context.Response.ContentType = MediaTypeNames.Application.Json;
+                await context.Response.WriteAsync(result);
+            }
+        });
         endpoints.MapEndpoints();
         endpoints.MapRazorPages();
     });
