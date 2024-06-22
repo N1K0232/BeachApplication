@@ -3,7 +3,7 @@
 	[Id] UNIQUEIDENTIFIER NOT NULL DEFAULT newid(),
     [CategoryId] UNIQUEIDENTIFIER NOT NULL,
     [Name] NVARCHAR(256) NOT NULL,
-    [Description] NVARCHAR(4096) NOT NULL,
+    [Description] NVARCHAR(4000) NOT NULL,
     [Quantity] INTEGER NULL,
     [Price] DECIMAL(8, 2) NOT NULL,
     [CreationDate] DATETIME NOT NULL DEFAULT getutcdate(),
