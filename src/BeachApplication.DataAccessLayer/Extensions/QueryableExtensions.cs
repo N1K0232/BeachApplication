@@ -1,7 +1,6 @@
 ﻿using BeachApplication.DataAccessLayer.Entities.Common;
-using Microsoft.EntityFrameworkCore;
 
-namespace BeachApplication.DataAccessLayer.Extensions;
+namespace Microsoft.EntityFrameworkCore;
 
 public static class QueryableExtensions
 {
