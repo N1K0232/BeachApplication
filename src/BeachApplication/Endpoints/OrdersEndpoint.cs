@@ -14,6 +14,23 @@ public class OrdersEndpoint : IEndpointRouteHandlerBuilder
     {
         var orderApiGroup = endpoints.MapGroup("/api/orders");
 
+        orderApiGroup.MapPost("details", AddOrderDetailAsync)
+            .RequireAuthorization("UserActive")
+            .WithValidator<SaveOrderRequest>()
+            .Produces<Order>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .WithOpenApi();
+
+        orderApiGroup.MapPost("create", CreateAsync)
+            .RequireAuthorization("UserActive")
+            .Produces<Order>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .WithOpenApi();
+
         orderApiGroup.MapDelete("{id:guid}", DeleteAsync)
             .RequireAuthorization("UserActive")
             .Produces(StatusCodes.Status204NoContent)
@@ -24,6 +41,7 @@ public class OrdersEndpoint : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         orderApiGroup.MapGet("{id:guid}", GetAsync)
+            .WithName("GetOrder")
             .RequireAuthorization("UserActive")
             .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -39,16 +57,18 @@ public class OrdersEndpoint : IEndpointRouteHandlerBuilder
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .WithOpenApi();
+    }
 
-        orderApiGroup.MapPost(string.Empty, SaveAsync)
-            .RequireAuthorization("UserActive")
-            .WithValidator<SaveOrderRequest>()
-            .Produces<Order>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .ProducesValidationProblem()
-            .WithOpenApi();
+    private static async Task<IResult> AddOrderDetailAsync(IOrderService orderService, SaveOrderRequest request, HttpContext httpContext)
+    {
+        var result = await orderService.AddOrderDetailAsync(request);
+        return httpContext.CreateResponse(result);
+    }
+
+    private static async Task<IResult> CreateAsync(IOrderService orderService, HttpContext httpContext)
+    {
+        var result = await orderService.CreateAsync();
+        return httpContext.CreateResponse(result, "GetOrder", new { id = result.Content?.Id });
     }
 
     private static async Task<IResult> DeleteAsync(IOrderService orderService, Guid id, HttpContext httpContext)
@@ -66,12 +86,6 @@ public class OrdersEndpoint : IEndpointRouteHandlerBuilder
     private static async Task<IResult> GetListAsync(IOrderService orderService, HttpContext httpContext, int pageIndex = 0, int itemsPerPage = 10, string orderBy = "OrderDate DESC, OrderTime DESC")
     {
         var result = await orderService.GetListAsync(pageIndex, itemsPerPage, orderBy);
-        return httpContext.CreateResponse(result);
-    }
-
-    private static async Task<IResult> SaveAsync(IOrderService orderService, SaveOrderRequest request, HttpContext httpContext)
-    {
-        var result = await orderService.SaveAsync(request);
         return httpContext.CreateResponse(result);
     }
 }

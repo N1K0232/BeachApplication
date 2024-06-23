@@ -28,6 +28,62 @@ public class OrderService : IOrderService
         this.mapper = mapper;
     }
 
+    public async Task<Result<Order>> AddOrderDetailAsync(SaveOrderRequest request)
+    {
+        var query = applicationDbContext.GetData<Entities.Order>();
+        var dbOrder = await query.FirstAsync(o => o.Id == request.OrderId);
+
+        var product = await applicationDbContext.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == request.ProductId);
+        if (product is null)
+        {
+            return Result.Fail(FailureReasons.ClientError, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, request.ProductId));
+        }
+
+        if (product.Quantity is not null)
+        {
+            product.Quantity -= request.Quantity;
+        }
+
+        var orderDetail = mapper.Map<Entities.OrderDetail>(request);
+        orderDetail.Price = Convert.ToDecimal(product.Price * request.Quantity);
+
+        await applicationDbContext.InsertAsync(orderDetail);
+
+        var affectedRows = await applicationDbContext.SaveAsync();
+        if (affectedRows > 0)
+        {
+            var savedOrder = mapper.Map<Order>(dbOrder);
+            savedOrder.OrderDetails = await GetOrderDetailsAsync(request.OrderId);
+
+            return savedOrder;
+        }
+
+        return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseInsertError);
+    }
+
+    public async Task<Result<Order>> CreateAsync()
+    {
+        var userId = await userService.GetIdAsync();
+        var dbOrder = new Entities.Order
+        {
+            UserId = userId,
+            Status = OrderStatus.New,
+            OrderDate = DateTime.UtcNow.ToDateOnly(),
+            OrderTime = DateTime.UtcNow.ToTimeOnly(),
+        };
+
+        await applicationDbContext.InsertAsync(dbOrder);
+        var affectedRows = await applicationDbContext.SaveAsync();
+
+        if (affectedRows > 0)
+        {
+            var createdOrder = mapper.Map<Order>(dbOrder);
+            return createdOrder;
+        }
+
+        return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseInsertError);
+    }
+
     public async Task<Result> DeleteAsync(Guid id)
     {
         var query = applicationDbContext.GetData<Entities.Order>(trackingChanges: true);
@@ -87,79 +143,6 @@ public class OrderService : IOrderService
         });
 
         return new ListResult<Order>(orders, totalCount, totalPages, hasNextPage);
-    }
-
-    public async Task<Result<Order>> SaveAsync(SaveOrderRequest request)
-    {
-        var query = applicationDbContext.GetData<Entities.Order>(trackingChanges: true);
-
-        try
-        {
-            var id = await CheckSaveAsync(request.OrderId);
-            var dbOrder = await query.Include(o => o.OrderDetails).FirstAsync(o => o.Id == id);
-
-            var product = await applicationDbContext.GetData<Entities.Product>(trackingChanges: true).FirstAsync(p => p.Id == request.ProductId);
-            if (product.Quantity is not null && request.Quantity is not null)
-            {
-                if (product.Quantity < request.Quantity)
-                {
-                    return Result.Fail(FailureReasons.ClientError, "Not enough products");
-                }
-
-                product.Quantity -= request.Quantity;
-            }
-
-            var orderDetail = mapper.Map<Entities.OrderDetail>(request);
-            orderDetail.OrderId = id;
-
-            dbOrder.OrderDetails.Add(orderDetail);
-            await applicationDbContext.SaveAsync();
-
-            var savedOrder = mapper.Map<Order>(dbOrder);
-            savedOrder.OrderDetails = mapper.Map<IEnumerable<OrderDetail>>(dbOrder.OrderDetails);
-
-            return savedOrder;
-        }
-        catch (ArgumentException ex)
-        {
-            return Result.Fail(FailureReasons.ClientError, ex);
-        }
-    }
-
-    private async Task<Guid> CheckSaveAsync(Guid? orderId)
-    {
-        var exists = await CheckExistsAsync(orderId);
-        if (exists)
-        {
-            return orderId.Value;
-        }
-        else
-        {
-            if (orderId is not null && orderId.HasValue)
-            {
-                throw new ArgumentException("invalid id", nameof(orderId));
-            }
-
-            var userId = await userService.GetIdAsync();
-            var order = new Entities.Order
-            {
-                UserId = userId,
-                Status = OrderStatus.New,
-                OrderDate = DateTime.UtcNow.ToDateOnly(),
-                OrderTime = DateTime.UtcNow.ToTimeOnly()
-            };
-
-            await applicationDbContext.InsertAsync(order);
-            await applicationDbContext.SaveAsync();
-
-            return order.Id;
-        }
-    }
-
-    private async Task<bool> CheckExistsAsync(Guid? orderId)
-    {
-        var query = applicationDbContext.GetData<Entities.Order>();
-        return await query.AnyAsync(o => o.Id == orderId);
     }
 
     private async Task<IEnumerable<OrderDetail>> GetOrderDetailsAsync(Guid id)
