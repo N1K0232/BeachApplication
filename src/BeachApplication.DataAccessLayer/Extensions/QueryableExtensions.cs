@@ -12,10 +12,7 @@ public static class QueryableExtensions
             return false;
         }
 
-        var skip = pageIndex * itemsPerPage;
-        var take = itemsPerPage + 1;
-
-        var list = await source.Skip(skip).Take(take).ToListAsync(cancellationToken);
+        var list = await GetListAsync(source, pageIndex, itemsPerPage, cancellationToken);
         return list.Count > itemsPerPage;
     }
 
@@ -46,6 +43,11 @@ public static class QueryableExtensions
             return Enumerable.Empty<T>().ToList();
         }
 
+        return await GetListAsync<T>(source, pageIndex, itemsPerPage, cancellationToken);
+    }
+
+    private static async Task<IList<T>> GetListAsync<T>(IQueryable<T> source, int pageIndex, int itemsPerPage, CancellationToken cancellationToken)
+    {
         var skip = pageIndex * itemsPerPage;
         var take = itemsPerPage + 1;
 

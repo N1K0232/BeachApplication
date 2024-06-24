@@ -41,7 +41,7 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity
     {
-        var set = !string.IsNullOrWhiteSpace(sql) && parameters.Length > 0 ? Set<T>().FromSqlRaw(sql, parameters) : Set<T>();
+        var set = GenerateQuery<T>(sql, parameters);
 
         if (ignoreQueryFilters)
         {
@@ -114,21 +114,7 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-
-        var entities = builder.Model.GetEntityTypes()
-            .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)).ToList();
-
-        foreach (var type in entities.Select(t => t.ClrType))
-        {
-            var methods = SetGlobalQueryFiltersMethod(type);
-            foreach (var method in methods)
-            {
-                var genericMethod = method.MakeGenericMethod(type);
-                genericMethod.Invoke(this, [builder]);
-            }
-        }
-
+        OnModelCreatingInternal(builder);
         base.OnModelCreating(builder);
     }
 
@@ -147,5 +133,35 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder modelBuilder) where T : DeletableEntity
     {
         modelBuilder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedDate == null);
+    }
+
+    private void OnModelCreatingInternal(ModelBuilder builder)
+    {
+        builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        var entities = builder.Model.GetEntityTypes()
+            .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)).ToList();
+
+        foreach (var type in entities.Select(t => t.ClrType))
+        {
+            var methods = SetGlobalQueryFiltersMethod(type);
+            foreach (var method in methods)
+            {
+                var genericMethod = method.MakeGenericMethod(type);
+                genericMethod.Invoke(this, [builder]);
+            }
+        }
+    }
+
+    private IQueryable<T> GenerateQuery<T>(string sql, params object[] parameters) where T : BaseEntity
+    {
+        var set = Set<T>();
+
+        if (!string.IsNullOrWhiteSpace(sql) && parameters.Length > 0)
+        {
+            return set.FromSqlRaw(sql, parameters);
+        }
+
+        return set;
     }
 }
