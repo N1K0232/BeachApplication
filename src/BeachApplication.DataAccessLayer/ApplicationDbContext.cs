@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using BeachApplication.Authentication;
 using BeachApplication.DataAccessLayer.Entities.Common;
+using EntityFramework.Exceptions.SqlServer;
 using Microsoft.EntityFrameworkCore;
 
 namespace BeachApplication.DataAccessLayer;
@@ -110,6 +111,12 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
         base.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseExceptionProcessor();
+        base.OnConfiguring(optionsBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder builder)

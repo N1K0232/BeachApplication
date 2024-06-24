@@ -22,6 +22,7 @@ using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Settings;
 using BeachApplication.DataProtectionLayer;
 using BeachApplication.DataProtectionLayer.Services;
 using BeachApplication.Extensions;
@@ -42,6 +43,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -78,6 +80,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     });
 
     var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
+    var dataContextSettings = services.ConfigureAndGet<DataContextSettings>(configuration, nameof(DataContextSettings));
     var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
     var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(configuration, nameof(OpenWeatherMapSettings));
     var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings));
@@ -265,16 +268,33 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         return handler;
     });
 
-    services.AddSqlServer<ApplicationDbContext>(sqlConnectionString);
     services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
+    services.AddSqlServer<ApplicationDbContext>(sqlConnectionString, options =>
+    {
+        options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        options.CommandTimeout(dataContextSettings.CommandTimeout);
+        options.EnableRetryOnFailure(dataContextSettings.MaxRetryCount, dataContextSettings.MaxRetryDelay, null);
+    });
 
     services.AddSqlContext(options =>
     {
         options.ConnectionString = sqlConnectionString;
     });
 
-    services.AddSqlServer<DataProtectionDbContext>(sqlConnectionString);
-    services.AddSqlServer<AuthenticationDbContext>(sqlConnectionString);
+    services.AddSqlServer<DataProtectionDbContext>(sqlConnectionString, options =>
+    {
+        options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        options.CommandTimeout(dataContextSettings.CommandTimeout);
+        options.EnableRetryOnFailure(dataContextSettings.MaxRetryCount, dataContextSettings.MaxRetryDelay, null);
+    });
+
+    services.AddSqlServer<AuthenticationDbContext>(sqlConnectionString, options =>
+    {
+        options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        options.CommandTimeout(dataContextSettings.CommandTimeout);
+        options.EnableRetryOnFailure(dataContextSettings.MaxRetryCount, dataContextSettings.MaxRetryDelay, null);
+    });
+
     services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
         options.User.RequireUniqueEmail = true;
