@@ -108,7 +108,9 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     services.AddExceptionHandler<DbUpdateExceptionHandler>();
 
     services.AddRazorPages();
-    services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql");
+    services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql")
+        .AddDbContextCheck<ApplicationDbContext>("database")
+        .AddDbContextCheck<AuthenticationDbContext>("identity");
 
     services.AddDataProtection().PersistKeysToDbContext<DataProtectionDbContext>();
     services.AddScoped<IDataProtectionService, DataProtectionService>();
