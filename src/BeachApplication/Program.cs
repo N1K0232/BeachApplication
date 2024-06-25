@@ -112,6 +112,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddDataProtection().PersistKeysToDbContext<DataProtectionDbContext>();
     services.AddScoped<IDataProtectionService, DataProtectionService>();
+
     services.AddScoped(services =>
     {
         var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();

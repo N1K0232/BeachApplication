@@ -15,7 +15,6 @@ public class SaveOrderRequestValidator : AbstractValidator<SaveOrderRequest>
 
         RuleFor(o => o.Quantity)
             .GreaterThan(0)
-            .When(o => o.Quantity is not null && o.Quantity.HasValue)
             .WithName(PropertyNames.Quantity)
             .WithMessage(ErrorMessages.NegativeQuantity);
     }
