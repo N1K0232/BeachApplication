@@ -110,7 +110,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     services.AddRazorPages();
     services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql")
         .AddDbContextCheck<ApplicationDbContext>("database")
-        .AddDbContextCheck<AuthenticationDbContext>("identity");
+        .AddDbContextCheck<AuthenticationDbContext>("identity")
+        .AddDbContextCheck<DataProtectionDbContext>("dataprotection");
 
     services.AddDataProtection().PersistKeysToDbContext<DataProtectionDbContext>();
     services.AddScoped<IDataProtectionService, DataProtectionService>();
