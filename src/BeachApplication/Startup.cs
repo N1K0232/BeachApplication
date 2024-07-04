@@ -64,40 +64,30 @@ using TinyHelpers.Json.Serialization;
 
 namespace BeachApplication;
 
-public class Startup
+public class Startup(IConfiguration configuration, IWebHostEnvironment environment)
 {
-    public Startup(IConfiguration configuration, IWebHostEnvironment environment)
-    {
-        Configuration = configuration;
-        Environment = environment;
-    }
-
-    public IConfiguration Configuration { get; }
-
-    public IWebHostEnvironment Environment { get; }
-
     public void ConfigureServices(IServiceCollection services)
     {
-        var appSettings = services.ConfigureAndGet<AppSettings>(Configuration, nameof(AppSettings));
-        var dataContextSettings = services.ConfigureAndGet<DataContextSettings>(Configuration, nameof(DataContextSettings));
-        var jwtSettings = services.ConfigureAndGet<JwtSettings>(Configuration, nameof(JwtSettings));
-        var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(Configuration, nameof(OpenWeatherMapSettings));
-        var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(Configuration, nameof(SendinblueSettings));
-        var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(Configuration, nameof(SwaggerSettings));
+        var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
+        var dataContextSettings = services.ConfigureAndGet<DataContextSettings>(configuration, nameof(DataContextSettings));
+        var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
+        var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(configuration, nameof(OpenWeatherMapSettings));
+        var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings));
+        var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings));
 
-        var sqlConnectionString = Configuration.GetConnectionString("SqlConnection");
-        var azureStorageConnectionString = Configuration.GetConnectionString("AzureStorageConnection");
+        var sqlConnectionString = configuration.GetConnectionString("SqlConnection");
+        var azureStorageConnectionString = configuration.GetConnectionString("AzureStorageConnection");
 
-        var administratorUserSettingsSection = Configuration.GetSection(nameof(AdministratorUserSettings));
-        var powerUserSettingsSection = Configuration.GetSection(nameof(PowerUserSettings));
-        var translatorSettingsSection = Configuration.GetSection(nameof(TranslatorSettings));
+        var administratorUserSettingsSection = configuration.GetSection(nameof(AdministratorUserSettings));
+        var powerUserSettingsSection = configuration.GetSection(nameof(PowerUserSettings));
+        var translatorSettingsSection = configuration.GetSection(nameof(TranslatorSettings));
 
         services.Configure<AdministratorUserSettings>(administratorUserSettingsSection);
         services.Configure<PowerUserSettings>(powerUserSettingsSection);
         services.Configure<TranslatorSettings>(translatorSettingsSection);
 
         services.AddRequestLocalization(appSettings.SupportedCultures);
-        services.AddWebOptimizer(minifyCss: true, minifyJavaScript: Environment.IsProduction());
+        services.AddWebOptimizer(minifyCss: true, minifyJavaScript: environment.IsProduction());
 
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
@@ -409,7 +399,7 @@ public class Startup
         var appSettings = app.ApplicationServices.GetRequiredService<IOptions<AppSettings>>().Value;
         var swaggerSettings = app.ApplicationServices.GetRequiredService<IOptions<SwaggerSettings>>().Value;
 
-        Environment.ApplicationName = appSettings.ApplicationName;
+        environment.ApplicationName = appSettings.ApplicationName;
 
         app.UseHttpsRedirection();
         app.UseRequestLocalization();
@@ -419,7 +409,7 @@ public class Startup
 
         app.UseWhen(context => context.IsWebRequest(), builder =>
         {
-            if (!Environment.IsDevelopment())
+            if (!environment.IsDevelopment())
             {
                 builder.UseExceptionHandler("/Errors/500");
                 builder.UseHsts();
