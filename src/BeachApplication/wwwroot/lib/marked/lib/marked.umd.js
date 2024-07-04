@@ -1,5 +1,5 @@
 /**
- * marked v13.0.0 - a markdown parser
+ * marked v13.0.2 - a markdown parser
  * Copyright (c) 2011-2024, Christopher Jeffrey. (MIT Licensed)
  * https://github.com/markedjs/marked
  */
@@ -421,12 +421,12 @@
                 }
                 // Get next list item
                 const itemRegex = new RegExp(`^( {0,3}${bull})((?:[\t ][^\\n]*)?(?:\\n|$))`);
-                let raw = '';
-                let itemContents = '';
                 let endsWithBlankLine = false;
                 // Check if current bullet point can start a new List Item
                 while (src) {
                     let endEarly = false;
+                    let raw = '';
+                    let itemContents = '';
                     if (!(cap = itemRegex.exec(src))) {
                         break;
                     }
@@ -437,10 +437,14 @@
                     src = src.substring(raw.length);
                     let line = cap[2].split('\n', 1)[0].replace(/^\t+/, (t) => ' '.repeat(3 * t.length));
                     let nextLine = src.split('\n', 1)[0];
+                    let blankLine = !line.trim();
                     let indent = 0;
                     if (this.options.pedantic) {
                         indent = 2;
                         itemContents = line.trimStart();
+                    }
+                    else if (blankLine) {
+                        indent = cap[1].length + 1;
                     }
                     else {
                         indent = cap[2].search(/[^ ]/); // Find first non-space char
@@ -448,8 +452,7 @@
                         itemContents = line.slice(indent);
                         indent += cap[1].length;
                     }
-                    let blankLine = false;
-                    if (!line && /^ *$/.test(nextLine)) { // Items begin with at most one blank line
+                    if (blankLine && /^ *$/.test(nextLine)) { // Items begin with at most one blank line
                         raw += nextLine + '\n';
                         src = src.substring(nextLine.length + 1);
                         endEarly = true;
@@ -545,8 +548,8 @@
                     list.raw += raw;
                 }
                 // Do not consume newlines at end of final item. Alternatively, make itemRegex *start* with any newlines to simplify/speed up endsWithBlankLine logic
-                list.items[list.items.length - 1].raw = raw.trimEnd();
-                (list.items[list.items.length - 1]).text = itemContents.trimEnd();
+                list.items[list.items.length - 1].raw = list.items[list.items.length - 1].raw.trimEnd();
+                list.items[list.items.length - 1].text = list.items[list.items.length - 1].text.trimEnd();
                 list.raw = list.raw.trimEnd();
                 // Item child tokens handled here at end because we needed to have the final item to trim it first
                 for (let i = 0; i < list.items.length; i++) {
@@ -2362,7 +2365,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(renderer.parser.parseInline(token.tokens), token.depth, unescape(renderer.parser.parseInline(token.tokens, renderer.parser.textRenderer)));
+                        return func.call(this, renderer.parser.parseInline(token.tokens), token.depth, unescape(renderer.parser.parseInline(token.tokens, renderer.parser.textRenderer)));
                     };
                 case 'code':
                     return function (token) {
@@ -2371,7 +2374,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.text, token.lang, !!token.escaped);
+                        return func.call(this, token.text, token.lang, !!token.escaped);
                     };
                 case 'table':
                     return function (token) {
@@ -2406,7 +2409,7 @@
                             }
                             body += this.tablerow({ text: cell });
                         }
-                        return func(header, body);
+                        return func.call(this, header, body);
                     };
                 case 'blockquote':
                     return function (token) {
@@ -2416,7 +2419,7 @@
                             return func.apply(this, arguments);
                         }
                         const body = this.parser.parse(token.tokens);
-                        return func(body);
+                        return func.call(this, body);
                     };
                 case 'list':
                     return function (token) {
@@ -2465,7 +2468,7 @@
                                 tokens: item.tokens
                             });
                         }
-                        return func(body, ordered, start);
+                        return func.call(this, body, ordered, start);
                     };
                 case 'html':
                     return function (token) {
@@ -2474,7 +2477,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.text, token.block);
+                        return func.call(this, token.text, token.block);
                     };
                 case 'paragraph':
                     return function (token) {
@@ -2483,7 +2486,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(this.parser.parseInline(token.tokens));
+                        return func.call(this, this.parser.parseInline(token.tokens));
                     };
                 case 'escape':
                     return function (token) {
@@ -2492,7 +2495,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.text);
+                        return func.call(this, token.text);
                     };
                 case 'link':
                     return function (token) {
@@ -2501,7 +2504,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.href, token.title, this.parser.parseInline(token.tokens));
+                        return func.call(this, token.href, token.title, this.parser.parseInline(token.tokens));
                     };
                 case 'image':
                     return function (token) {
@@ -2510,7 +2513,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.href, token.title, token.text);
+                        return func.call(this, token.href, token.title, token.text);
                     };
                 case 'strong':
                     return function (token) {
@@ -2519,7 +2522,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(this.parser.parseInline(token.tokens));
+                        return func.call(this, this.parser.parseInline(token.tokens));
                     };
                 case 'em':
                     return function (token) {
@@ -2528,7 +2531,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(this.parser.parseInline(token.tokens));
+                        return func.call(this, this.parser.parseInline(token.tokens));
                     };
                 case 'codespan':
                     return function (token) {
@@ -2537,7 +2540,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.text);
+                        return func.call(this, token.text);
                     };
                 case 'del':
                     return function (token) {
@@ -2546,7 +2549,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(this.parser.parseInline(token.tokens));
+                        return func.call(this, this.parser.parseInline(token.tokens));
                     };
                 case 'text':
                     return function (token) {
@@ -2555,7 +2558,7 @@
                             // eslint-disable-next-line prefer-rest-params
                             return func.apply(this, arguments);
                         }
-                        return func(token.text);
+                        return func.call(this, token.text);
                     };
                 // do nothing
             }

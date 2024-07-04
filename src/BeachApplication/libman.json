@@ -23,11 +23,11 @@
             "destination": "wwwroot/lib/fontawesome-icons"
         },
         {
-            "library": "alpinejs@3.14.0",
+            "library": "alpinejs@3.14.1",
             "destination": "wwwroot/lib/alpinejs"
         },
         {
-            "library": "marked@13.0.0",
+            "library": "marked@13.0.2",
             "destination": "wwwroot/lib/marked"
         },
         {
