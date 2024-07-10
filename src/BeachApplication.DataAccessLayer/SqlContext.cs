@@ -14,11 +14,19 @@ public class SqlContext : ISqlContext
 
     public SqlContext(SqlContextOptions options)
     {
-        connection = new SqlConnection(options.ConnectionString);
-        cancellationTokenSource = new CancellationTokenSource();
-
-        disposed = false;
+        Initialize(options.ConnectionString);
     }
+
+    public bool IsOpened
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return IsOpenedInternal;
+        }
+    }
+
+    private bool IsOpenedInternal => connection.State == ConnectionState.Open;
 
     public async Task<IEnumerable<T>> GetDataAsync<T>(string sql, object param = null, IDbTransaction transaction = null, CommandType? commandType = null)
         where T : class
@@ -146,7 +154,7 @@ public class SqlContext : ISqlContext
         {
             if (connection is not null)
             {
-                if (connection.State is ConnectionState.Open)
+                if (IsOpenedInternal)
                 {
                     connection.Close();
                 }
@@ -157,17 +165,18 @@ public class SqlContext : ISqlContext
 
             if (cancellationTokenSource is not null)
             {
-                if (cancellationTokenSource.IsCancellationRequested)
-                {
-                    cancellationTokenSource.Cancel();
-                }
-
                 cancellationTokenSource.Dispose();
                 cancellationTokenSource = null;
             }
 
             disposed = true;
         }
+    }
+
+    private void Initialize(string connectionString)
+    {
+        connection = new SqlConnection(connectionString);
+        cancellationTokenSource = new CancellationTokenSource();
     }
 
     private void ThrowIfDisposed()

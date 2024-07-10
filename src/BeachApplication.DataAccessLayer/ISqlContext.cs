@@ -4,6 +4,8 @@ namespace BeachApplication.DataAccessLayer;
 
 public interface ISqlContext : IDisposable
 {
+    bool IsOpened { get; }
+
     Task<IEnumerable<T>> GetDataAsync<T>(string sql, object param = null, IDbTransaction transaction = null, CommandType? commandType = null)
         where T : class;
 
