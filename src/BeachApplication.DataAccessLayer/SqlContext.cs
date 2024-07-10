@@ -94,7 +94,7 @@ public class SqlContext : ISqlContext
         ThrowIfDisposed();
 
         await connection.OpenAsync(cancellationTokenSource.Token);
-        return (await connection.QueryAsync(sql, map, param, transaction, splitOn: splitOn, commandType: commandType).ConfigureAwait(false)).FirstOrDefault();
+        return (await connection.QueryAsync(sql, map, param, transaction, splitOn: splitOn, commandType: commandType)).FirstOrDefault();
     }
 
     public async Task<TReturn> GetObjectAsync<TFirst, TSecond, TThird, TFourth, TReturn>(string sql, Func<TFirst, TSecond, TThird, TFourth, TReturn> map, object param = null, IDbTransaction transaction = null, CommandType? commandType = null, string splitOn = "Id")
@@ -107,7 +107,7 @@ public class SqlContext : ISqlContext
         ThrowIfDisposed();
 
         await connection.OpenAsync(cancellationTokenSource.Token);
-        return (await connection.QueryAsync(sql, map, param, transaction, splitOn: splitOn, commandType: commandType).ConfigureAwait(false)).FirstOrDefault();
+        return (await connection.QueryAsync(sql, map, param, transaction, splitOn: splitOn, commandType: commandType)).FirstOrDefault();
     }
 
     public async Task<T> GetSingleValueAsync<T>(string sql, object param = null, IDbTransaction transaction = null, CommandType? commandType = null)

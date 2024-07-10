@@ -137,9 +137,9 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         return methods;
     }
 
-    private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder modelBuilder) where T : DeletableEntity
+    private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {
-        modelBuilder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedDate == null);
+        builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedDate == null);
     }
 
     private void OnModelCreatingInternal(ModelBuilder builder)
