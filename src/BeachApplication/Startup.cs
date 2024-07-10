@@ -12,6 +12,7 @@ using BeachApplication.Authentication.Requirements;
 using BeachApplication.BusinessLayer.Clients;
 using BeachApplication.BusinessLayer.Clients.Interfaces;
 using BeachApplication.BusinessLayer.Clients.Refit;
+using BeachApplication.BusinessLayer.Diagnostics.BackgroundJobs;
 using BeachApplication.BusinessLayer.Diagnostics.HealthChecks;
 using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Providers;
@@ -55,6 +56,8 @@ using OperationResults.AspNetCore.Http;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
+using Quartz;
+using Quartz.AspNetCore;
 using Refit;
 using Serilog;
 using TinyHelpers.AspNetCore.Extensions;
@@ -325,6 +328,8 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         });
 
         services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
+        services.AddScoped<IUserService, HttpUserService>();
+
         services.AddAuthorization(options =>
         {
             var policyBuilder = new AuthorizationPolicyBuilder().RequireAuthenticatedUser();
@@ -388,10 +393,30 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
             .AsImplementedInterfaces()
             .WithScopedLifetime());
 
-        services.AddScoped<IUserService, HttpUserService>();
-
         services.AddHostedService<IdentityRoleService>();
         services.AddHostedService<IdentityUserService>();
+
+        services.AddQuartzHostedService(options =>
+        {
+            options.StartDelay = TimeSpan.Zero;
+            options.AwaitApplicationStarted = true;
+            options.WaitForJobsToComplete = true;
+        });
+
+        services.AddQuartz(options =>
+        {
+            var ordersManagerBackgroundJobKey = nameof(OrdersManagerBackgroundJob);
+            options.AddJob<OrdersManagerBackgroundJob>(jobOptions => jobOptions.WithIdentity(ordersManagerBackgroundJobKey));
+
+            options.AddTrigger(triggerOptions =>
+            {
+                triggerOptions.ForJob(ordersManagerBackgroundJobKey)
+                    .WithIdentity($"{ordersManagerBackgroundJobKey}-trigger")
+                    .WithCronSchedule("0 0 0 * * ?");
+            });
+        });
+
+        services.AddQuartzServer();
     }
 
     public void Configure(IApplicationBuilder app)
