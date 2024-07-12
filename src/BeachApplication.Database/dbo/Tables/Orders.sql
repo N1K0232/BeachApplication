@@ -5,6 +5,8 @@
     [Status] NVARCHAR(50) NOT NULL,
     [OrderDate] DATE NOT NULL,
     [OrderTime] TIME(7) NOT NULL,
+    [SecurityStamp] NVARCHAR(MAX) NOT NULL,
+    [ConcurrencyStamp] NVARCHAR(MAX) NOT NULL,
     [CreationDate] DATETIME NOT NULL DEFAULT getutcdate(),
     [LastModificationDate] DATETIME NULL,
     [IsDeleted] BIT NOT NULL DEFAULT (0),

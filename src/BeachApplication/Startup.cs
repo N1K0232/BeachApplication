@@ -23,6 +23,7 @@ using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Internal;
 using BeachApplication.DataAccessLayer.Settings;
 using BeachApplication.DataProtectionLayer;
 using BeachApplication.DataProtectionLayer.Services;
@@ -125,6 +126,7 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
 
         services.AddRateLimiter(options =>
         {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddFixedWindowLimiter("beachapplication", options =>
             {
                 options.PermitLimit = 5;
@@ -132,7 +134,6 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
                 options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                 options.QueueLimit = 2;
             });
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         });
 
         services.AddProblemDetails(options =>
@@ -264,7 +265,9 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
             return handler;
         });
 
+        services.AddScoped<IEntityStore, EntityStore>();
         services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
+
         services.AddSqlServer<ApplicationDbContext>(sqlConnectionString, options =>
         {
             options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);

@@ -6,6 +6,8 @@
     [Description] NVARCHAR(4000) NOT NULL,
     [Quantity] INTEGER NULL,
     [Price] DECIMAL(8, 2) NOT NULL,
+    [SecurityStamp] NVARCHAR(MAX) NOT NULL,
+    [ConcurrencyStamp] NVARCHAR(MAX) NOT NULL,
     [CreationDate] DATETIME NOT NULL DEFAULT getutcdate(),
     [LastModificationDate] DATETIME NULL,
     [IsDeleted] BIT NOT NULL DEFAULT (0),

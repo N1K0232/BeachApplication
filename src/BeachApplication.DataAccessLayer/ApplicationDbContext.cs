@@ -1,8 +1,10 @@
 ﻿using System.Reflection;
 using BeachApplication.Authentication;
 using BeachApplication.DataAccessLayer.Entities.Common;
+using BeachApplication.DataAccessLayer.Internal;
 using EntityFramework.Exceptions.SqlServer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace BeachApplication.DataAccessLayer;
 
@@ -12,10 +14,13 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(t => t.IsGenericMethod && t.Name == nameof(SetQueryFilterOnDeletableEntity));
 
-    private CancellationTokenSource tokenSource = new CancellationTokenSource();
+    private readonly IEntityStore entityStore;
+    private CancellationTokenSource tokenSource;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IEntityStore entityStore) : base(options)
     {
+        this.entityStore = entityStore;
+        tokenSource = new CancellationTokenSource();
     }
 
     public Task DeleteAsync<T>(T entity) where T : BaseEntity
@@ -34,9 +39,15 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         return Task.CompletedTask;
     }
 
-    public async ValueTask<T> GetAsync<T>(Guid id) where T : BaseEntity
+    public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
         var entity = await Set<T>().FindAsync([id], tokenSource.Token);
+        if (entity is not null)
+        {
+            await UpdateSecurityColumnsAsync(entity);
+            await SaveChangesAsync(true, tokenSource.Token);
+        }
+
         return entity;
     }
 
@@ -60,13 +71,16 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task<int> SaveAsync()
     {
-        var entries = ChangeTracker.Entries()
-            .Where(e => typeof(BaseEntity).IsAssignableFrom(e.Entity.GetType()))
-            .ToList();
+        var entries = GetEntries(typeof(BaseEntity));
 
         foreach (var entry in entries.Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
         {
             var entity = entry.Entity as BaseEntity;
+
+            if (entry.State is EntityState.Added)
+            {
+                await UpdateSecurityColumnsAsync(entity);
+            }
 
             if (entry.State is EntityState.Modified)
             {
@@ -77,6 +91,7 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
                 }
 
                 entity.LastModificationDate = DateTime.UtcNow;
+                await UpdateSecurityColumnsAsync(entity);
             }
 
             if (entry.State is EntityState.Deleted)
@@ -137,6 +152,12 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         return methods;
     }
 
+    private async Task UpdateSecurityColumnsAsync<T>(T entity) where T : BaseEntity
+    {
+        await entityStore.GenerateSecurityStampAsync(entity);
+        await entityStore.GenerateConcurrencyStampAsync(entity);
+    }
+
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {
         builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedDate == null);
@@ -170,5 +191,11 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         }
 
         return set;
+    }
+
+    private IEnumerable<EntityEntry> GetEntries(Type entityType)
+    {
+        var entries = ChangeTracker.Entries();
+        return entries.Where(e => entityType.IsAssignableFrom(e.Entity.GetType()));
     }
 }
