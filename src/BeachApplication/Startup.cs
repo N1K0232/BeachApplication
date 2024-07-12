@@ -23,6 +23,7 @@ using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.DataAccessLayer.Internal;
 using BeachApplication.DataAccessLayer.Settings;
 using BeachApplication.DataProtectionLayer;
@@ -95,6 +96,14 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
 
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
+
+        services.AddDistributedSqlServerCache(options =>
+        {
+            options.DefaultSlidingExpiration = TimeSpan.FromHours(1);
+            options.ConnectionString = sqlConnectionString;
+            options.SchemaName = "dbo";
+            options.TableName = "BeachApplicationCache";
+        });
 
         services.AddExceptionHandler<DefaultExceptionHandler>();
         services.AddExceptionHandler<ApplicationExceptionHandler>();
@@ -266,8 +275,9 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         });
 
         services.AddScoped<IEntityStore, EntityStore>();
-        services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
+        services.AddSingleton<ISqlClientCache, SqlClientCache>();
 
+        services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
         services.AddSqlServer<ApplicationDbContext>(sqlConnectionString, options =>
         {
             options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);

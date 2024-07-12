@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using BeachApplication.Authentication;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using BeachApplication.DataAccessLayer.Internal;
 using EntityFramework.Exceptions.SqlServer;
@@ -15,33 +16,37 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         .Single(t => t.IsGenericMethod && t.Name == nameof(SetQueryFilterOnDeletableEntity));
 
     private readonly IEntityStore entityStore;
+    private readonly ISqlClientCache cache;
     private CancellationTokenSource tokenSource;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IEntityStore entityStore) : base(options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+        IEntityStore entityStore,
+        ISqlClientCache cache) : base(options)
     {
         this.entityStore = entityStore;
+        this.cache = cache;
         tokenSource = new CancellationTokenSource();
     }
 
-    public Task DeleteAsync<T>(T entity) where T : BaseEntity
+    public async Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
-        ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+        await cache.RemoveAsync(entity.Id, tokenSource.Token);
         Set<T>().Remove(entity);
-
-        return Task.CompletedTask;
     }
 
-    public Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
+    public async Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
     {
-        ArgumentNullException.ThrowIfNull(entities, nameof(entities));
-        Set<T>().RemoveRange(entities);
+        foreach (var entity in entities)
+        {
+            await cache.RemoveAsync(entity.Id, tokenSource.Token);
+        }
 
-        return Task.CompletedTask;
+        Set<T>().RemoveRange(entities);
     }
 
     public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
-        var entity = await Set<T>().FindAsync([id], tokenSource.Token);
+        var entity = await GetInternalAsync<T>(id);
         if (entity is not null)
         {
             await UpdateSecurityColumnsAsync(entity);
@@ -65,8 +70,9 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task InsertAsync<T>(T entity) where T : BaseEntity
     {
-        ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+        await UpdateSecurityColumnsAsync(entity);
         await Set<T>().AddAsync(entity, tokenSource.Token);
+        await cache.SetAsync(entity, tokenSource.Token);
     }
 
     public async Task<int> SaveAsync()
@@ -77,11 +83,6 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         {
             var entity = entry.Entity as BaseEntity;
 
-            if (entry.State is EntityState.Added)
-            {
-                await UpdateSecurityColumnsAsync(entity);
-            }
-
             if (entry.State is EntityState.Modified)
             {
                 if (entity is DeletableEntity deletableEntity)
@@ -91,6 +92,8 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
                 }
 
                 entity.LastModificationDate = DateTime.UtcNow;
+
+                await cache.RefreshAsync(entity.Id, tokenSource.Token);
                 await UpdateSecurityColumnsAsync(entity);
             }
 
@@ -156,6 +159,19 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     {
         await entityStore.GenerateSecurityStampAsync(entity);
         await entityStore.GenerateConcurrencyStampAsync(entity);
+    }
+
+    private async Task<T> GetInternalAsync<T>(Guid id) where T : BaseEntity
+    {
+        var cachedEntity = await cache.GetAsync<T>(id, tokenSource.Token);
+        if (cachedEntity is not null)
+        {
+            await cache.RefreshAsync(id, tokenSource.Token);
+            return cachedEntity;
+        }
+
+        var entity = await Set<T>().FindAsync([id], tokenSource.Token);
+        return entity;
     }
 
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
