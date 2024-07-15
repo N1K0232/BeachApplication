@@ -1,56 +1,29 @@
-﻿using System.Text;
-using System.Text.Json;
-using BeachApplication.DataAccessLayer.Entities.Common;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using BeachApplication.DataAccessLayer.Entities.Common;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BeachApplication.DataAccessLayer.Caching;
 
-public class SqlClientCache(IDistributedCache cache) : ISqlClientCache
+public class SqlClientCache(IMemoryCache cache) : ISqlClientCache
 {
-    private const string EntityKey = "Entity-{0}";
-
-    public async Task<T> GetAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
+    public Task<T> GetAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
     {
-        var key = GenerateKey(id);
-        var bytes = await cache.GetAsync(key, cancellationToken);
+        if (cache.TryGetValue<T>(id, out var entity))
+        {
+            return Task.FromResult(entity);
+        }
 
-        return ConvertBytesToEntity<T>(bytes);
+        return Task.FromResult<T>(null);
     }
 
-    public async Task RefreshAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var key = GenerateKey(id);
-        await cache.RefreshAsync(key, cancellationToken);
+        cache.Remove(id);
+        return Task.CompletedTask;
     }
 
-    public async Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task SetAsync<T>(T entity, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity
     {
-        var key = GenerateKey(id);
-        await cache.RemoveAsync(key, cancellationToken);
-    }
-
-    public async Task SetAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
-    {
-        var key = GenerateKey(entity.Id);
-        var bytes = ConvertEntityToBytes(entity);
-
-        await cache.SetAsync(key, bytes, cancellationToken);
-    }
-
-    private static string GenerateKey(Guid id)
-    {
-        return string.Format(EntityKey, id);
-    }
-
-    private static byte[] ConvertEntityToBytes<T>(T entity) where T : BaseEntity
-    {
-        var jsonContent = JsonSerializer.Serialize(entity);
-        return Encoding.UTF8.GetBytes(jsonContent);
-    }
-
-    private static T ConvertBytesToEntity<T>(byte[] content) where T : BaseEntity
-    {
-        var jsonContent = Encoding.UTF8.GetString(content);
-        return JsonSerializer.Deserialize<T>(jsonContent);
+        cache.Set(entity.Id, entity, expirationTime);
+        return Task.CompletedTask;
     }
 }

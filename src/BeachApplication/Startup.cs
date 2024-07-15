@@ -97,14 +97,6 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
 
-        services.AddDistributedSqlServerCache(options =>
-        {
-            options.DefaultSlidingExpiration = TimeSpan.FromHours(1);
-            options.ConnectionString = sqlConnectionString;
-            options.SchemaName = "dbo";
-            options.TableName = "BeachApplicationCache";
-        });
-
         services.AddExceptionHandler<DefaultExceptionHandler>();
         services.AddExceptionHandler<ApplicationExceptionHandler>();
         services.AddExceptionHandler<DbUpdateExceptionHandler>();

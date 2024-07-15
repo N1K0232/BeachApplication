@@ -46,10 +46,10 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
-        var entity = await GetInternalAsync<T>(id);
+        var entity = await GetInternalAsync<T>(id, tokenSource.Token);
         if (entity is not null)
         {
-            await UpdateSecurityColumnsAsync(entity);
+            await GenerateSecurityOptionsAsync(entity, tokenSource.Token);
             await SaveChangesAsync(true, tokenSource.Token);
         }
 
@@ -70,9 +70,9 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task InsertAsync<T>(T entity) where T : BaseEntity
     {
-        await UpdateSecurityColumnsAsync(entity);
+        await GenerateSecurityOptionsAsync(entity, tokenSource.Token);
         await Set<T>().AddAsync(entity, tokenSource.Token);
-        await cache.SetAsync(entity, tokenSource.Token);
+        await cache.SetAsync(entity, TimeSpan.FromHours(1), tokenSource.Token);
     }
 
     public async Task<int> SaveAsync()
@@ -92,9 +92,10 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
                 }
 
                 entity.LastModificationDate = DateTime.UtcNow;
+                await GenerateSecurityOptionsAsync(entity, tokenSource.Token);
 
-                await cache.RefreshAsync(entity.Id, tokenSource.Token);
-                await UpdateSecurityColumnsAsync(entity);
+                await cache.RemoveAsync(entity.Id, tokenSource.Token);
+                await cache.SetAsync(entity, TimeSpan.FromHours(1), tokenSource.Token);
             }
 
             if (entry.State is EntityState.Deleted)
@@ -155,25 +156,6 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         return methods;
     }
 
-    private async Task UpdateSecurityColumnsAsync<T>(T entity) where T : BaseEntity
-    {
-        await entityStore.GenerateSecurityStampAsync(entity);
-        await entityStore.GenerateConcurrencyStampAsync(entity);
-    }
-
-    private async Task<T> GetInternalAsync<T>(Guid id) where T : BaseEntity
-    {
-        var cachedEntity = await cache.GetAsync<T>(id, tokenSource.Token);
-        if (cachedEntity is not null)
-        {
-            await cache.RefreshAsync(id, tokenSource.Token);
-            return cachedEntity;
-        }
-
-        var entity = await Set<T>().FindAsync([id], tokenSource.Token);
-        return entity;
-    }
-
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {
         builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedDate == null);
@@ -181,7 +163,8 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     private void OnModelCreatingInternal(ModelBuilder builder)
     {
-        builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        var assembly = Assembly.GetExecutingAssembly();
+        builder.ApplyConfigurationsFromAssembly(assembly);
 
         var entities = builder.Model.GetEntityTypes()
             .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)).ToList();
@@ -213,5 +196,23 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     {
         var entries = ChangeTracker.Entries();
         return entries.Where(e => entityType.IsAssignableFrom(e.Entity.GetType()));
+    }
+
+    private async Task<T> GetInternalAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
+    {
+        var cachedEntity = await cache.GetAsync<T>(id, cancellationToken);
+        if (cachedEntity is not null)
+        {
+            return cachedEntity;
+        }
+
+        var entity = await Set<T>().FindAsync([id], cancellationToken);
+        return entity;
+    }
+
+    private async Task GenerateSecurityOptionsAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
+    {
+        await entityStore.GenerateConcurrencyStampAsync(entity, cancellationToken);
+        await entityStore.GenerateSecurityStampAsync(entity, cancellationToken);
     }
 }
