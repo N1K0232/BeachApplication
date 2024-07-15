@@ -5,13 +5,13 @@ namespace BeachApplication.DataAccessLayer.Internal;
 
 public class EntityStore(IDataProtectionService dataProtectionService) : IEntityStore
 {
-    public Task GenerateConcurrencyStampAsync<T>(T entity) where T : BaseEntity
+    public Task GenerateConcurrencyStampAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         entity.ConcurrencyStamp = Guid.NewGuid().ToString();
         return Task.CompletedTask;
     }
 
-    public async Task GenerateSecurityStampAsync<T>(T entity) where T : BaseEntity
+    public async Task GenerateSecurityStampAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         var result = new char[50];
@@ -23,6 +23,6 @@ public class EntityStore(IDataProtectionService dataProtectionService) : IEntity
         }
 
         var securityStamp = new string(result);
-        entity.SecurityStamp = await dataProtectionService.ProtectAsync(securityStamp);
+        entity.SecurityStamp = await dataProtectionService.ProtectAsync(securityStamp, cancellationToken);
     }
 }

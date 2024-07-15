@@ -5,7 +5,7 @@ namespace BeachApplication.DataAccessLayer.Internal;
 
 public interface IEntityStore
 {
-    Task GenerateConcurrencyStampAsync<T>(T entity) where T : BaseEntity;
+    Task GenerateConcurrencyStampAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity;
 
-    Task GenerateSecurityStampAsync<T>(T entity) where T : BaseEntity;
+    Task GenerateSecurityStampAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity;
 }
