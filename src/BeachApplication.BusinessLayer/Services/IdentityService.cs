@@ -57,13 +57,8 @@ public class IdentityService : IIdentityService
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.SerialNumber, user.SecurityStamp ?? string.Empty)
             }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-            var response = CreateResponse(claims);
 
-            user.RefreshToken = response.RefreshToken;
-            user.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
-
-            await userManager.UpdateAsync(user);
-            return response;
+            return await SaveAndGetResponseAsync(user, claims);
         }
 
         if (signInResult.IsLockedOut)
@@ -88,12 +83,7 @@ public class IdentityService : IIdentityService
                 return Result.Fail(FailureReasons.ClientError, "Couldn't validate refresh token", "Couldn't validate refresh token");
             }
 
-            var response = CreateResponse(user.Claims);
-            dbUser.RefreshToken = response.RefreshToken;
-            dbUser.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
-
-            await userManager.UpdateAsync(dbUser);
-            return response;
+            return await SaveAndGetResponseAsync(dbUser, user.Claims);
         }
 
         return Result.Fail(FailureReasons.ClientError, "Couldn't validate access token", "Couldn't validate access token");
@@ -163,7 +153,7 @@ public class IdentityService : IIdentityService
         return Result.Fail(FailureReasons.ItemNotFound, "User not found", "User not found");
     }
 
-    private AuthResponse CreateResponse(IEnumerable<Claim> claims)
+    private async Task<Result<AuthResponse>> SaveAndGetResponseAsync(ApplicationUser user, IEnumerable<Claim> claims)
     {
         var securityKey = Encoding.UTF8.GetBytes(jwtSettings.SecurityKey);
         var randomNumber = new byte[4096];
@@ -188,7 +178,16 @@ public class IdentityService : IIdentityService
         var accessToken = jwtSecurityTokenHandler.WriteToken(jwtSecurityToken);
         var refreshToken = Convert.ToBase64String(randomNumber);
 
-        return new AuthResponse(accessToken, refreshToken);
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
+
+        var result = await userManager.UpdateAsync(user);
+        if (result.Succeeded)
+        {
+            return new AuthResponse(accessToken, refreshToken);
+        }
+
+        return Result.Fail(FailureReasons.ClientError, result.GetErrors());
     }
 
     private Task<ClaimsPrincipal> ValidateAsync(string accessToken)
