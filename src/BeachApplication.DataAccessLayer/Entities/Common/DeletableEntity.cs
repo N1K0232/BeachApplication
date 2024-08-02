@@ -2,7 +2,7 @@
 
 public abstract class DeletableEntity : BaseEntity
 {
-    public virtual bool IsDeleted { get; set; }
+    public bool IsDeleted { get; set; }
 
-    public virtual DateTime? DeletedDate { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }

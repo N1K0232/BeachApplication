@@ -7,7 +7,7 @@ namespace BeachApplication.BusinessLayer.Services.Interfaces;
 
 public interface IOrderService
 {
-    Task<Result<Order>> AddOrderDetailAsync(SaveOrderRequest request);
+    Task<Result> AddOrderDetailAsync(SaveOrderRequest request);
 
     Task<Result<Order>> CreateAsync();
 

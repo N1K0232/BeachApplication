@@ -5,10 +5,8 @@
     [Length] BIGINT NOT NULL,
     [ContentType] NVARCHAR(50) NOT NULL,
     [Description] NVARCHAR(MAX) NULL,
-    [SecurityStamp] NVARCHAR(MAX) NOT NULL,
-    [ConcurrencyStamp] NVARCHAR(MAX) NOT NULL,
-    [CreationDate] DATETIME NOT NULL DEFAULT getutcdate(),
-    [LastModificationDate] DATETIME NULL,
+    [CreatedAt] DATETIME NOT NULL DEFAULT getutcdate(),
+    [LastModifiedAt] DATETIME NULL,
 
     PRIMARY KEY([Id])
 );

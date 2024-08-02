@@ -14,7 +14,7 @@ public interface IApplicationDbContext
 
     Task InsertAsync<T>(T entity) where T : BaseEntity;
 
-    Task<int> SaveAsync();
+    Task SaveAsync();
 
     Task ExecuteTransactionAsync(Func<Task> action);
 }

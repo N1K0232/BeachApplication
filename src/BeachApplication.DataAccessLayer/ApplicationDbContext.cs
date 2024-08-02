@@ -2,31 +2,19 @@
 using BeachApplication.Authentication;
 using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.DataAccessLayer.Entities.Common;
-using BeachApplication.DataAccessLayer.Internal;
 using EntityFramework.Exceptions.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace BeachApplication.DataAccessLayer;
 
-public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ISqlClientCache cache) : AuthenticationDbContext(options), IApplicationDbContext
 {
     private static readonly MethodInfo setQueryFilterOnDeletableEntity = typeof(ApplicationDbContext)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(t => t.IsGenericMethod && t.Name == nameof(SetQueryFilterOnDeletableEntity));
 
-    private readonly IEntityStore entityStore;
-    private readonly ISqlClientCache cache;
-    private CancellationTokenSource tokenSource;
-
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
-        IEntityStore entityStore,
-        ISqlClientCache cache) : base(options)
-    {
-        this.entityStore = entityStore;
-        this.cache = cache;
-        tokenSource = new CancellationTokenSource();
-    }
+    private CancellationTokenSource tokenSource = new CancellationTokenSource();
 
     public async Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
@@ -46,13 +34,13 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
-        var entity = await GetInternalAsync<T>(id, tokenSource.Token);
-        if (entity is not null)
+        var cachedEntity = await cache.GetAsync<T>(id, tokenSource.Token);
+        if (cachedEntity is not null)
         {
-            await GenerateSecurityOptionsAsync(entity, tokenSource.Token);
-            await SaveChangesAsync(true, tokenSource.Token);
+            return cachedEntity;
         }
 
+        var entity = await Set<T>().FindAsync([id], tokenSource.Token);
         return entity;
     }
 
@@ -70,46 +58,50 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task InsertAsync<T>(T entity) where T : BaseEntity
     {
-        await GenerateSecurityOptionsAsync(entity, tokenSource.Token);
+        ArgumentNullException.ThrowIfNull(entity, nameof(entity));
         await Set<T>().AddAsync(entity, tokenSource.Token);
-        await cache.SetAsync(entity, TimeSpan.FromHours(1), tokenSource.Token);
     }
 
-    public async Task<int> SaveAsync()
+    public async Task SaveAsync()
     {
         var entries = GetEntries(typeof(BaseEntity));
+        BaseEntity entity = null;
+        var state = EntityState.Added;
 
-        foreach (var entry in entries.Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        foreach (var entry in entries)
         {
-            var entity = entry.Entity as BaseEntity;
+            entity = entry.Entity as BaseEntity;
+            state = entry.State;
 
-            if (entry.State is EntityState.Modified)
+            if (state is EntityState.Modified)
             {
                 if (entity is DeletableEntity deletableEntity)
                 {
                     deletableEntity.IsDeleted = false;
-                    deletableEntity.DeletedDate = null;
+                    deletableEntity.DeletedAt = null;
                 }
 
-                entity.LastModificationDate = DateTime.UtcNow;
-                await GenerateSecurityOptionsAsync(entity, tokenSource.Token);
-
-                await cache.RemoveAsync(entity.Id, tokenSource.Token);
-                await cache.SetAsync(entity, TimeSpan.FromHours(1), tokenSource.Token);
+                entity.LastModifiedAt = DateTime.UtcNow;
+                await cache.RefreshAsync(entity.Id, tokenSource.Token);
             }
 
-            if (entry.State is EntityState.Deleted)
+            if (state is EntityState.Deleted)
             {
                 if (entity is DeletableEntity deletableEntity)
                 {
                     entry.State = EntityState.Modified;
                     deletableEntity.IsDeleted = true;
-                    deletableEntity.DeletedDate = DateTime.UtcNow;
+                    deletableEntity.DeletedAt = DateTime.UtcNow;
+                }
+
+                if (await cache.ExistsAsync(entity.Id, tokenSource.Token))
+                {
+                    await cache.RemoveAsync(entity.Id, tokenSource.Token);
                 }
             }
         }
 
-        return await SaveChangesAsync(true, tokenSource.Token);
+        await SaveChangesAsync(true, tokenSource.Token);
     }
 
     public async Task ExecuteTransactionAsync(Func<Task> action)
@@ -158,7 +150,7 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {
-        builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedDate == null);
+        builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedAt == null);
     }
 
     private void OnModelCreatingInternal(ModelBuilder builder)
@@ -194,25 +186,10 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     private IEnumerable<EntityEntry> GetEntries(Type entityType)
     {
-        var entries = ChangeTracker.Entries();
-        return entries.Where(e => entityType.IsAssignableFrom(e.Entity.GetType()));
-    }
+        var entries = ChangeTracker.Entries()
+            .Where(e => entityType.IsAssignableFrom(e.Entity.GetType()))
+            .ToList();
 
-    private async Task<T> GetInternalAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
-    {
-        var cachedEntity = await cache.GetAsync<T>(id, cancellationToken);
-        if (cachedEntity is not null)
-        {
-            return cachedEntity;
-        }
-
-        var entity = await Set<T>().FindAsync([id], cancellationToken);
-        return entity;
-    }
-
-    private async Task GenerateSecurityOptionsAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
-    {
-        await entityStore.GenerateConcurrencyStampAsync(entity, cancellationToken);
-        await entityStore.GenerateSecurityStampAsync(entity, cancellationToken);
+        return entries.Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted);
     }
 }

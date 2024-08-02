@@ -24,7 +24,6 @@ using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Caching;
-using BeachApplication.DataAccessLayer.Internal;
 using BeachApplication.DataAccessLayer.Settings;
 using BeachApplication.DataProtectionLayer;
 using BeachApplication.DataProtectionLayer.Services;
@@ -76,6 +75,7 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
         var dataContextSettings = services.ConfigureAndGet<DataContextSettings>(configuration, nameof(DataContextSettings));
         var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
+
         var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(configuration, nameof(OpenWeatherMapSettings));
         var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings));
         var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings));
@@ -83,12 +83,7 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         var sqlConnectionString = configuration.GetConnectionString("SqlConnection");
         var azureStorageConnectionString = configuration.GetConnectionString("AzureStorageConnection");
 
-        var administratorUserSettingsSection = configuration.GetSection(nameof(AdministratorUserSettings));
-        var powerUserSettingsSection = configuration.GetSection(nameof(PowerUserSettings));
         var translatorSettingsSection = configuration.GetSection(nameof(TranslatorSettings));
-
-        services.Configure<AdministratorUserSettings>(administratorUserSettingsSection);
-        services.Configure<PowerUserSettings>(powerUserSettingsSection);
         services.Configure<TranslatorSettings>(translatorSettingsSection);
 
         services.AddRequestLocalization(appSettings.SupportedCultures);
@@ -96,6 +91,14 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
 
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
+
+        services.AddDistributedSqlServerCache(options =>
+        {
+            options.ConnectionString = sqlConnectionString;
+            options.TableName = "CacheStore";
+            options.SchemaName = "dbo";
+            options.DefaultSlidingExpiration = TimeSpan.FromDays(1);
+        });
 
         services.AddExceptionHandler<DefaultExceptionHandler>();
         services.AddExceptionHandler<ApplicationExceptionHandler>();
@@ -266,10 +269,9 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
             return handler;
         });
 
-        services.AddScoped<IEntityStore, EntityStore>();
         services.AddSingleton<ISqlClientCache, SqlClientCache>();
-
         services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
+
         services.AddSqlServer<ApplicationDbContext>(sqlConnectionString, options =>
         {
             options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);

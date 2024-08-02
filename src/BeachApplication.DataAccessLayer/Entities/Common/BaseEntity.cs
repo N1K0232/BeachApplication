@@ -2,13 +2,9 @@
 
 public abstract class BaseEntity
 {
-    public virtual Guid Id { get; set; }
+    public Guid Id { get; set; }
 
-    public virtual string SecurityStamp { get; set; }
+    public DateTime CreatedAt { get; set; }
 
-    public virtual string ConcurrencyStamp { get; set; }
-
-    public virtual DateTime CreationDate { get; set; }
-
-    public virtual DateTime? LastModificationDate { get; set; }
+    public DateTime? LastModifiedAt { get; set; }
 }

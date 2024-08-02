@@ -2,6 +2,7 @@
 using AutoMapper;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Collections;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
@@ -12,33 +13,19 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ProductService : IProductService
+public class ProductService(IApplicationDbContext context, ISqlClientCache cache, IMapper mapper) : IProductService
 {
-    private readonly IApplicationDbContext applicationDbContext;
-    private readonly IMapper mapper;
-
-    public ProductService(IApplicationDbContext applicationDbContext, IMapper mapper)
-    {
-        this.applicationDbContext = applicationDbContext;
-        this.mapper = mapper;
-    }
-
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var query = applicationDbContext.GetData<Entities.Product>(trackingChanges: true);
+        var query = context.GetData<Entities.Product>(trackingChanges: true);
         var product = await query.FirstOrDefaultAsync(p => p.Id == id);
 
         if (product is not null)
         {
-            await applicationDbContext.DeleteAsync(product);
-            var affectedRows = await applicationDbContext.SaveAsync();
+            await context.DeleteAsync(product);
+            await context.SaveAsync();
 
-            if (affectedRows > 0)
-            {
-                return Result.Ok();
-            }
-
-            return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseDeleteError);
+            return Result.Ok();
         }
 
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
@@ -46,7 +33,7 @@ public class ProductService : IProductService
 
     public async Task<Result<Product>> GetAsync(Guid id)
     {
-        var query = applicationDbContext.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
+        var query = context.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
         var dbProduct = await query.FirstOrDefaultAsync(p => p.Id == id);
 
         if (dbProduct is not null)
@@ -60,7 +47,7 @@ public class ProductService : IProductService
 
     public async Task<Result<ListResult<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy)
     {
-        var query = applicationDbContext.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
+        var query = context.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
 
         if (name.HasValue())
         {
@@ -83,7 +70,7 @@ public class ProductService : IProductService
 
     public async Task<Result<Product>> InsertAsync(SaveProductRequest request)
     {
-        var query = applicationDbContext.GetData<Entities.Product>();
+        var query = context.GetData<Entities.Product>();
         var exists = await query.AnyAsync(p => p.Name == request.Name && p.Quantity == request.Quantity && p.Price == request.Price);
 
         if (exists)
@@ -98,35 +85,27 @@ public class ProductService : IProductService
         }
 
         var product = mapper.Map<Entities.Product>(request);
-        await applicationDbContext.InsertAsync(product);
+        await context.InsertAsync(product);
 
-        var affectedRows = await applicationDbContext.SaveAsync();
-        if (affectedRows > 0)
-        {
-            var savedProduct = mapper.Map<Product>(product);
-            return savedProduct;
-        }
+        await context.SaveAsync();
+        await cache.SetAsync(product, TimeSpan.FromHours(1));
 
-        return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseInsertError);
+        var savedProduct = mapper.Map<Product>(product);
+        return savedProduct;
     }
 
     public async Task<Result<Product>> UpdateAsync(Guid id, SaveProductRequest request)
     {
-        var query = applicationDbContext.GetData<Entities.Product>(ignoreQueryFilters: true, trackingChanges: true);
+        var query = context.GetData<Entities.Product>(ignoreQueryFilters: true, trackingChanges: true);
         var product = await query.FirstOrDefaultAsync(p => p.Id == id);
 
         if (product is not null)
         {
             mapper.Map(request, product);
-            var affectedRows = await applicationDbContext.SaveAsync();
+            await context.SaveAsync();
 
-            if (affectedRows > 0)
-            {
-                var savedProduct = mapper.Map<Product>(product);
-                return savedProduct;
-            }
-
-            return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseUpdateError);
+            var savedProduct = mapper.Map<Product>(product);
+            return savedProduct;
         }
 
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
@@ -134,7 +113,7 @@ public class ProductService : IProductService
 
     private async Task<bool> CategoryExistsAsync(Guid id)
     {
-        var query = applicationDbContext.GetData<Entities.Category>();
+        var query = context.GetData<Entities.Category>();
         return await query.AnyAsync(c => c.Id == id);
     }
 }

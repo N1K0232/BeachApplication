@@ -4,6 +4,7 @@ using BeachApplication.BusinessLayer.Internal;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.StorageProviders;
 using Microsoft.EntityFrameworkCore;
@@ -13,34 +14,18 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ImageService : IImageService
+public class ImageService(IApplicationDbContext context, ISqlClientCache cache, IStorageProvider storageProvider, IMapper mapper) : IImageService
 {
-    private readonly IApplicationDbContext applicationDbContext;
-    private readonly IStorageProvider storageProvider;
-    private readonly IMapper mapper;
-
-    public ImageService(IApplicationDbContext applicationDbContext, IStorageProvider storageProvider, IMapper mapper)
-    {
-        this.applicationDbContext = applicationDbContext;
-        this.storageProvider = storageProvider;
-        this.mapper = mapper;
-    }
-
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var image = await applicationDbContext.GetAsync<Entities.Image>(id);
+        var image = await context.GetAsync<Entities.Image>(id);
         if (image is not null)
         {
-            await applicationDbContext.DeleteAsync(image);
+            await context.DeleteAsync(image);
             await storageProvider.DeleteAsync(image.Path);
 
-            var affectedRows = await applicationDbContext.SaveAsync();
-            if (affectedRows > 0)
-            {
-                return Result.Ok();
-            }
-
-            return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseDeleteError);
+            await context.SaveAsync();
+            return Result.Ok();
         }
 
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
@@ -48,7 +33,7 @@ public class ImageService : IImageService
 
     public async Task<Result<Image>> GetAsync(Guid id)
     {
-        var dbImage = await applicationDbContext.GetAsync<Entities.Image>(id);
+        var dbImage = await context.GetAsync<Entities.Image>(id);
         if (dbImage is not null)
         {
             var image = mapper.Map<Image>(dbImage);
@@ -60,15 +45,16 @@ public class ImageService : IImageService
 
     public async Task<Result<IEnumerable<Image>>> GetListAsync()
     {
-        var query = applicationDbContext.GetData<Entities.Image>();
-        var images = await query.ProjectTo<Image>(mapper.ConfigurationProvider).OrderBy(i => i.Path).ToListAsync();
+        var images = await context.GetData<Entities.Image>()
+            .OrderBy(i => i.Path).ProjectTo<Image>(mapper.ConfigurationProvider)
+            .ToListAsync();
 
         return images;
     }
 
     public async Task<Result<StreamFileContent>> ReadAsync(Guid id)
     {
-        var image = await applicationDbContext.GetAsync<Entities.Image>(id);
+        var image = await context.GetAsync<Entities.Image>(id);
         if (image is not null)
         {
             var stream = await storageProvider.ReadAsStreamAsync(image.Path);
@@ -94,15 +80,10 @@ public class ImageService : IImageService
             Description = description
         };
 
-        await applicationDbContext.InsertAsync(image);
-        var affectedRows = await applicationDbContext.SaveAsync();
+        await context.InsertAsync(image);
+        await context.SaveAsync();
 
-        if (affectedRows > 0)
-        {
-            var savedImage = mapper.Map<Image>(image);
-            return savedImage;
-        }
-
-        return Result.Fail(FailureReasons.ClientError, ErrorMessages.DatabaseInsertError);
+        await cache.SetAsync(image, TimeSpan.FromHours(1));
+        return mapper.Map<Image>(image);
     }
 }
