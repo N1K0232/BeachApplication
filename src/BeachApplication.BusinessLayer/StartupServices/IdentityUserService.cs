@@ -1,46 +1,35 @@
 ﻿using BeachApplication.Authentication;
 using BeachApplication.Authentication.Entities;
-using BeachApplication.BusinessLayer.Settings;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 namespace BeachApplication.BusinessLayer.StartupServices;
 
-public class IdentityUserService : IHostedService
+public class IdentityUserService(IServiceProvider services, IConfiguration configuration) : IHostedService
 {
-    private readonly IServiceProvider services;
-    private readonly AdministratorUserSettings administratorUserSettings;
-    private readonly PowerUserSettings powerUserSettings;
-
-    public IdentityUserService(IServiceProvider services,
-        IOptions<AdministratorUserSettings> admistratorUserSettingsOptions,
-        IOptions<PowerUserSettings> powerUserSettingsOptions)
-    {
-        this.services = services;
-        administratorUserSettings = admistratorUserSettingsOptions.Value;
-        powerUserSettings = powerUserSettingsOptions.Value;
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        var administratorUserSection = configuration.GetSection("AdministratorUser");
+        var powerUserSection = configuration.GetSection("PowerUser");
+
         var administratorUser = new ApplicationUser
         {
-            FirstName = administratorUserSettings.FirstName,
-            Email = administratorUserSettings.Email,
-            UserName = administratorUserSettings.Email
+            FirstName = administratorUserSection["FirstName"],
+            Email = administratorUserSection["Email"],
+            UserName = administratorUserSection["Email"]
         };
 
         var powerUser = new ApplicationUser
         {
-            FirstName = powerUserSettings.FirstName,
-            Email = powerUserSettings.Email,
-            UserName = powerUserSettings.Email
+            FirstName = powerUserSection["FirstName"],
+            Email = powerUserSection["Email"],
+            UserName = powerUserSection["Email"]
         };
 
-        await CreateAsync(administratorUser, administratorUserSettings.Password, RoleNames.Administrator, RoleNames.User);
-        await CreateAsync(powerUser, powerUserSettings.Password, RoleNames.PowerUser, RoleNames.User);
+        await CreateAsync(administratorUser, administratorUserSection["Password"], RoleNames.Administrator, RoleNames.User);
+        await CreateAsync(powerUser, powerUserSection["Password"], RoleNames.PowerUser, RoleNames.User);
     }
 
     private async Task CreateAsync(ApplicationUser user, string password, params string[] roles)
