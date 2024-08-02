@@ -73,7 +73,7 @@
             this.isBusy = true;
 
             try {
-                var accessToken = window.localStorage.getItem('access_token');
+                var accessToken = GetAccessToken();
                 var response = await fetch('api/me', {
                     method: "GET",
                     headers: {

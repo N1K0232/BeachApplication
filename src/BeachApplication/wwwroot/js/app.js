@@ -10,6 +10,18 @@
     return new Blob([ia], { type: mimeString })
 }
 
+function GetAccessToken() {
+    return GetStorageItem('access_token');
+}
+
+function GetRefreshToken() {
+    return GetStorageItem('refresh_token');
+}
+
+function GetStorageItem(key) {
+    return window.localStorage.getItem(key);
+}
+
 function GetErrorMessage(statusCode, content) {
     if (statusCode >= 200 && statusCode <= 299)
         return null;
