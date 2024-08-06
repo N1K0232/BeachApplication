@@ -4,7 +4,6 @@
     [Path] NVARCHAR(512) NOT NULL,
     [Length] BIGINT NOT NULL,
     [ContentType] NVARCHAR(50) NOT NULL,
-    [Description] NVARCHAR(MAX) NULL,
     [CreatedAt] DATETIME NOT NULL DEFAULT getutcdate(),
     [LastModifiedAt] DATETIME NULL,
 

@@ -9,6 +9,4 @@ public class Image : BaseEntity
     public long Length { get; set; }
 
     public string ContentType { get; set; } = null!;
-
-    public string? Description { get; set; }
 }
