@@ -16,5 +16,5 @@ public interface ISqlClientCache
 
     Task SetAsync<T>(T entity, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity;
 
-    Task SetAsync<T>(string key, IList<T> entities, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity
+    Task SetAsync<T>(string key, IList<T> entities, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity;
 }

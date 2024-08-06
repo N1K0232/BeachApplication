@@ -12,7 +12,7 @@
             this.isBusy = false;
         },
 
-        delete: async function () {
+        delete: async function (id) {
             this.isBusy = true;
 
             try {

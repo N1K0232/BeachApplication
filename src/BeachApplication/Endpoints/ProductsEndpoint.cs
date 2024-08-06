@@ -1,9 +1,9 @@
 ﻿using BeachApplication.BusinessLayer.Services;
 using BeachApplication.Extensions;
-using BeachApplication.Shared.Collections;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.Routing;
+using OperationResults;
 using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
@@ -33,7 +33,7 @@ public class ProductsEndpoint : IEndpointRouteHandlerBuilder
 
         productsApiGroup.MapGet(string.Empty, GetListAsync)
             .RequireAuthorization("UserActive")
-            .Produces<ListResult<Product>>(StatusCodes.Status200OK)
+            .Produces<PaginatedList<Product>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)

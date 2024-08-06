@@ -1,9 +1,9 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Extensions;
-using BeachApplication.Shared.Collections;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.Routing;
+using OperationResults;
 using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
@@ -17,7 +17,7 @@ public class OrdersEndpoint : IEndpointRouteHandlerBuilder
         orderApiGroup.MapPost("details", AddOrderDetailAsync)
             .RequireAuthorization("UserActive")
             .WithValidator<SaveOrderRequest>()
-            .Produces(StatusCodes.Status204NoContent)
+            .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -52,7 +52,7 @@ public class OrdersEndpoint : IEndpointRouteHandlerBuilder
 
         orderApiGroup.MapGet(string.Empty, GetListAsync)
             .RequireAuthorization("UserActive")
-            .Produces<ListResult<Order>>(StatusCodes.Status200OK)
+            .Produces<PaginatedList<Order>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)

@@ -5,7 +5,6 @@ using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Caching;
-using BeachApplication.Shared.Collections;
 using BeachApplication.Shared.Enums;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
@@ -18,7 +17,7 @@ namespace BeachApplication.BusinessLayer.Services;
 
 public class OrderService(IApplicationDbContext context, ISqlClientCache cache, IUserService userService, IMapper mapper) : IOrderService
 {
-    public async Task<Result> AddOrderDetailAsync(SaveOrderRequest request)
+    public async Task<Result<Order>> AddOrderDetailAsync(SaveOrderRequest request)
     {
         var dbOrder = await context.GetData<Entities.Order>().FirstAsync(o => o.Id == request.OrderId);
         var dbProduct = await context.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == request.ProductId);
@@ -33,14 +32,20 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
             dbProduct.Quantity -= request.Quantity;
         }
 
-        var orderDetail = mapper.Map<Entities.OrderDetail>(request);
-        orderDetail.Price = Convert.ToDecimal(dbProduct.Price * request.Quantity);
+        await context.ExecuteTransactionAsync(async () =>
+        {
+            var orderDetail = mapper.Map<Entities.OrderDetail>(request);
+            orderDetail.Price = Convert.ToDecimal(dbProduct.Price * request.Quantity);
 
-        await context.InsertAsync(orderDetail);
-        await context.SaveAsync();
+            await context.InsertAsync(orderDetail);
+            await context.SaveAsync();
+            await cache.SetAsync(orderDetail, TimeSpan.FromHours(1));
+        });
 
-        await cache.SetAsync(orderDetail, TimeSpan.FromHours(1));
-        return Result.Ok();
+        var order = mapper.Map<Order>(dbOrder);
+        order.OrderDetails = await LoadOrderDetailsAsync(dbOrder.Id);
+
+        return order;
     }
 
     public async Task<Result<Order>> CreateAsync()
@@ -92,7 +97,7 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
         if (dbOrder is not null)
         {
             var order = mapper.Map<Order>(dbOrder);
-            order.OrderDetails = await GetOrderDetailsAsync(id);
+            order.OrderDetails = await LoadOrderDetailsAsync(id);
 
             return order;
         }
@@ -100,28 +105,30 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Order, id));
     }
 
-    public async Task<Result<ListResult<Order>>> GetListAsync(int pageIndex, int itemsPerPage, string orderBy)
+    public async Task<Result<PaginatedList<Order>>> GetListAsync(int pageIndex, int itemsPerPage, string orderBy)
     {
         var query = context.GetData<Entities.Order>();
-        var totalCount = await query.LongCountAsync();
-        var totalPages = await query.TotalPagesAsync(itemsPerPage);
+        var totalCount = await query.CountAsync();
+
         var hasNextPage = await query.HasNextPageAsync(pageIndex, itemsPerPage);
         var dbOrders = await query.OrderBy(orderBy).ToListAsync(pageIndex, itemsPerPage);
 
         var orders = mapper.Map<IEnumerable<Order>>(dbOrders).Take(itemsPerPage);
-        await orders.ForEachAsync(async (order) =>
-        {
-            order.OrderDetails = await GetOrderDetailsAsync(order.Id);
-        });
+        await orders.ForEachAsync(LoadOrderDetailsAsync);
 
-        return new ListResult<Order>(orders, totalCount, totalPages, hasNextPage);
+        return new PaginatedList<Order>(orders, totalCount, hasNextPage);
     }
 
-    private async Task<IEnumerable<OrderDetail>> GetOrderDetailsAsync(Guid id)
+    private async Task<IEnumerable<OrderDetail>> LoadOrderDetailsAsync(Guid id)
     {
         var query = context.GetData<Entities.OrderDetail>();
         var orderDetails = await query.Where(o => o.OrderId == id).ToListAsync();
 
         return mapper.Map<IEnumerable<OrderDetail>>(orderDetails);
+    }
+
+    private async Task LoadOrderDetailsAsync(Order order)
+    {
+        order.OrderDetails = await LoadOrderDetailsAsync(order.Id);
     }
 }

@@ -1,5 +1,4 @@
-﻿using BeachApplication.Shared.Collections;
-using BeachApplication.Shared.Models;
+﻿using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using OperationResults;
 
@@ -11,7 +10,7 @@ public interface IProductService
 
     Task<Result<Product>> GetAsync(Guid id);
 
-    Task<Result<ListResult<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy);
+    Task<Result<PaginatedList<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy);
 
     Task<Result<Product>> InsertAsync(SaveProductRequest request);
 

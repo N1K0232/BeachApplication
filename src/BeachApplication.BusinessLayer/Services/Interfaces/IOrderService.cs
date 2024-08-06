@@ -1,5 +1,4 @@
-﻿using BeachApplication.Shared.Collections;
-using BeachApplication.Shared.Models;
+﻿using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using OperationResults;
 
@@ -7,7 +6,7 @@ namespace BeachApplication.BusinessLayer.Services.Interfaces;
 
 public interface IOrderService
 {
-    Task<Result> AddOrderDetailAsync(SaveOrderRequest request);
+    Task<Result<Order>> AddOrderDetailAsync(SaveOrderRequest request);
 
     Task<Result<Order>> CreateAsync();
 
@@ -15,5 +14,5 @@ public interface IOrderService
 
     Task<Result<Order>> GetAsync(Guid id);
 
-    Task<Result<ListResult<Order>>> GetListAsync(int pageIndex, int itemsPerPage, string orderBy);
+    Task<Result<PaginatedList<Order>>> GetListAsync(int pageIndex, int itemsPerPage, string orderBy);
 }

@@ -1,0 +1,54 @@
+﻿@page
+
+@model CategoriesModel
+
+@{
+    ViewData["Title"] = "Categories";
+}
+
+<div x-data="categories">
+    <div>
+        <form method="get" x-on:submit.prevent>
+            <label for="name">Name</label>
+            <input name="name" type="text" x-model="name" /><br />
+            <label for="description">Description</label>
+            <input name="description" type="text" x-model="description" /><br />
+            <button type="submit" class="btn btn-primary mt-2" x-on:click="getList()">Search</button>
+        </form>
+    </div>
+    <div>
+
+    </div>
+    <div x-cloak x-init="getList()">
+        <h5 x-show="isBusy">Loading...</h5>
+        <table class="table" x-show="!isBusy">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="category in categories">
+                    <tr>
+                        <td x-text="category.name"></td>
+                        <td x-text="category.description"></td>
+                        <td>
+                            <button class="btn btn-danger" x-on:click.prevent="delete('category.id')">Delete</button> |
+                            <button class="btn btn-info" x-on:click.prevent="get('category.id')">Details</button> |
+                            <a href="/UpdateTournament">Update</a>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("alpine:init", () => {
+            categories('@Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName');
+        });
+    </script>
+}

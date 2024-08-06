@@ -24,8 +24,8 @@ public static class QueryableExtensions
             return 0;
         }
 
-        var totalCount = await source.LongCountAsync(cancellationToken);
-        var totalPages = Convert.ToInt32(totalCount / itemsPerPage);
+        var totalCount = await source.CountAsync(cancellationToken);
+        var totalPages = totalCount / itemsPerPage;
 
         if ((totalPages % itemsPerPage) > 0)
         {
@@ -40,10 +40,10 @@ public static class QueryableExtensions
         var hasItems = await source.AnyAsync(cancellationToken);
         if (!hasItems)
         {
-            return Enumerable.Empty<T>().ToList();
+            return [];
         }
 
-        return await GetListAsync<T>(source, pageIndex, itemsPerPage, cancellationToken);
+        return await GetListAsync(source, pageIndex, itemsPerPage, cancellationToken);
     }
 
     private static async Task<IList<T>> GetListAsync<T>(IQueryable<T> source, int pageIndex, int itemsPerPage, CancellationToken cancellationToken)

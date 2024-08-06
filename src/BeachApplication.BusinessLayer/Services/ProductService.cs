@@ -3,7 +3,6 @@ using AutoMapper;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Caching;
-using BeachApplication.Shared.Collections;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +44,7 @@ public class ProductService(IApplicationDbContext context, ISqlClientCache cache
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
     }
 
-    public async Task<Result<ListResult<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy)
+    public async Task<Result<PaginatedList<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy)
     {
         var query = context.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
 
@@ -59,13 +58,13 @@ public class ProductService(IApplicationDbContext context, ISqlClientCache cache
             query = query.Where(p => p.Category.Name.Contains(category));
         }
 
-        var totalCount = await query.LongCountAsync();
-        var totalPages = await query.TotalPagesAsync(itemsPerPage);
+        var totalCount = await query.CountAsync();
         var hasNextPage = await query.HasNextPageAsync(pageIndex, itemsPerPage);
-        var dbProducts = await query.OrderBy(orderBy).ToListAsync(pageIndex, itemsPerPage);
 
+        var dbProducts = await query.OrderBy(orderBy).ToListAsync(pageIndex, itemsPerPage);
         var products = mapper.Map<IEnumerable<Product>>(dbProducts).Take(itemsPerPage);
-        return new ListResult<Product>(products, totalCount, totalPages, hasNextPage);
+
+        return new PaginatedList<Product>(products, totalCount, hasNextPage);
     }
 
     public async Task<Result<Product>> InsertAsync(SaveProductRequest request)
