@@ -4,17 +4,8 @@ using MimeMapping;
 
 namespace BeachApplication.StorageProviders.Azure;
 
-public class AzureStorageClient : IStorageClient
+public class AzureStorageClient(BlobServiceClient client, AzureStorageOptions options) : IStorageClient
 {
-    private readonly BlobServiceClient client;
-    private readonly AzureStorageOptions options;
-
-    public AzureStorageClient(BlobServiceClient client, AzureStorageOptions options)
-    {
-        this.client = client;
-        this.options = options;
-    }
-
     public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
         var blobContainerClient = client.GetBlobContainerClient(options.ContainerName);

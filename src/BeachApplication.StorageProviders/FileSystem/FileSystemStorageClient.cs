@@ -1,14 +1,7 @@
 ﻿namespace BeachApplication.StorageProviders.FileSystem;
 
-public class FileSystemStorageClient : IStorageClient
+public class FileSystemStorageClient(FileSystemStorageOptions options) : IStorageClient
 {
-    private readonly FileSystemStorageOptions options;
-
-    public FileSystemStorageClient(FileSystemStorageOptions options)
-    {
-        this.options = options;
-    }
-
     public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
         var fullPath = CreatePath(path);

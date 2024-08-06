@@ -2,22 +2,10 @@
 
 namespace BeachApplication.StorageProviders;
 
-public class StorageProvider : IStorageProvider
+public class StorageProvider(IStorageClient client, IStorageCache cache) : IStorageProvider
 {
-    private readonly IStorageClient client;
-    private readonly IStorageCache cache;
-
-    private CancellationTokenSource cancellationTokenSource;
-    private bool disposed;
-
-    public StorageProvider(IStorageClient client, IStorageCache cache)
-    {
-        this.client = client;
-        this.cache = cache;
-
-        cancellationTokenSource = new CancellationTokenSource();
-        disposed = false;
-    }
+    private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+    private bool disposed = false;
 
     public async Task DeleteAsync(string path)
     {
