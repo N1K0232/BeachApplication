@@ -5,17 +5,8 @@ using Serilog.Events;
 
 namespace BeachApplication.Logging;
 
-public class SqliteBatchSink : ILogEventSink
+public class SqliteBatchSink(string databasePath, string tableName) : ILogEventSink
 {
-    private readonly string databasePath;
-    private readonly string tableName;
-
-    public SqliteBatchSink(string databasePath, string tableName)
-    {
-        this.databasePath = databasePath;
-        this.tableName = tableName;
-    }
-
     public void Emit(LogEvent logEvent)
     {
         CreateTable();
@@ -58,7 +49,7 @@ public class SqliteBatchSink : ILogEventSink
         return connection;
     }
 
-    private static void CreateParameter(IDbCommand command, string name, DbType type, object value)
+    private static void CreateParameter(IDbCommand command, string name, DbType type, object? value)
     {
         var parameter = command.CreateParameter();
         parameter.ParameterName = name;

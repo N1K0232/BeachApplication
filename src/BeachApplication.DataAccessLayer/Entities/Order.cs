@@ -14,7 +14,7 @@ public class Order : DeletableEntity
 
     public TimeOnly OrderTime { get; set; }
 
-    public virtual ApplicationUser User { get; set; }
+    public virtual ApplicationUser User { get; set; } = null!;
 
-    public virtual ICollection<OrderDetail> OrderDetails { get; set; }
+    public virtual ICollection<OrderDetail>? OrderDetails { get; set; }
 }

@@ -16,20 +16,20 @@ public class IdentityUserService(IServiceProvider services, IConfiguration confi
 
         var administratorUser = new ApplicationUser
         {
-            FirstName = administratorUserSection["FirstName"],
+            FirstName = administratorUserSection["FirstName"]!,
             Email = administratorUserSection["Email"],
             UserName = administratorUserSection["Email"]
         };
 
         var powerUser = new ApplicationUser
         {
-            FirstName = powerUserSection["FirstName"],
+            FirstName = powerUserSection["FirstName"]!,
             Email = powerUserSection["Email"],
             UserName = powerUserSection["Email"]
         };
 
-        await CreateAsync(administratorUser, administratorUserSection["Password"], RoleNames.Administrator, RoleNames.User);
-        await CreateAsync(powerUser, powerUserSection["Password"], RoleNames.PowerUser, RoleNames.User);
+        await CreateAsync(administratorUser, administratorUserSection["Password"]!, RoleNames.Administrator, RoleNames.User);
+        await CreateAsync(powerUser, powerUserSection["Password"]!, RoleNames.PowerUser, RoleNames.User);
     }
 
     private async Task CreateAsync(ApplicationUser user, string password, params string[] roles)

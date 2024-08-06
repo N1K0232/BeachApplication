@@ -24,7 +24,10 @@ public class OrdersManagerBackgroundJob : IJob
 
         foreach (var order in orders)
         {
-            applicationDbContext.Set<OrderDetail>().RemoveRange(order.OrderDetails);
+            if (order.OrderDetails?.Count > 0)
+            {
+                applicationDbContext.Set<OrderDetail>().RemoveRange(order.OrderDetails);
+            }
         }
 
         // by not calling the SaveAsync method i will avoid to set the query filters rule

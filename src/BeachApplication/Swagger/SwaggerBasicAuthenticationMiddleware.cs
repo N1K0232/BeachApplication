@@ -9,26 +9,19 @@ using TinyHelpers.Extensions;
 
 namespace BeachApplication.Swagger;
 
-public class SwaggerBasicAuthenticationMiddleware
+public class SwaggerBasicAuthenticationMiddleware(RequestDelegate next, IOptions<SwaggerSettings> swaggerSettingsOptions)
 {
-    private readonly RequestDelegate next;
-    private readonly SwaggerSettings swaggerSettings;
-
-    public SwaggerBasicAuthenticationMiddleware(RequestDelegate next, IOptions<SwaggerSettings> swaggerSettingsOptions)
-    {
-        this.next = next;
-        swaggerSettings = swaggerSettingsOptions.Value;
-    }
+    private readonly SwaggerSettings swaggerSettings = swaggerSettingsOptions.Value;
 
     public async Task InvokeAsync(HttpContext httpContext)
     {
         if (httpContext.IsSwaggerRequest() && swaggerSettings.UserName.HasValue() && swaggerSettings.Password.HasValue())
         {
-            string authenticationHeader = httpContext.Request.Headers[HeaderNames.Authorization];
+            string? authenticationHeader = httpContext.Request.Headers[HeaderNames.Authorization];
             if (authenticationHeader?.StartsWith("Basic ") ?? false)
             {
                 var header = AuthenticationHeaderValue.Parse(authenticationHeader);
-                var parameter = Convert.FromBase64String(header.Parameter);
+                var parameter = Convert.FromBase64String(header.Parameter ?? string.Empty);
                 var credentials = Encoding.UTF8.GetString(parameter).Split(':', count: 2);
 
                 var userName = credentials.ElementAtOrDefault(0);

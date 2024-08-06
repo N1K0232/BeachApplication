@@ -32,7 +32,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         Set<T>().RemoveRange(entities);
     }
 
-    public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
+    public async Task<T?> GetAsync<T>(Guid id) where T : BaseEntity
     {
         var cachedEntity = await cache.GetAsync<T>(id, tokenSource.Token);
         if (cachedEntity is not null)
@@ -44,7 +44,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         return entity;
     }
 
-    public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity
+    public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string? sql = null, params object[] parameters) where T : BaseEntity
     {
         var set = GenerateQuery<T>(sql, parameters);
 
@@ -65,15 +65,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public async Task SaveAsync()
     {
         var entries = GetEntries(typeof(BaseEntity));
-        BaseEntity entity = null;
-        var state = EntityState.Added;
 
         foreach (var entry in entries)
         {
-            entity = entry.Entity as BaseEntity;
-            state = entry.State;
+            var entity = (entry.Entity as BaseEntity)!;
 
-            if (state is EntityState.Modified)
+            if (entry.State is EntityState.Modified)
             {
                 if (entity is DeletableEntity deletableEntity)
                 {
@@ -85,7 +82,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 await cache.RefreshAsync(entity.Id, tokenSource.Token);
             }
 
-            if (state is EntityState.Deleted)
+            if (entry.State is EntityState.Deleted)
             {
                 if (entity is DeletableEntity deletableEntity)
                 {
@@ -118,7 +115,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public override void Dispose()
     {
         tokenSource.Dispose();
-        tokenSource = null;
+        tokenSource = null!;
 
         base.Dispose();
         GC.SuppressFinalize(this);
@@ -172,7 +169,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         }
     }
 
-    private IQueryable<T> GenerateQuery<T>(string sql, params object[] parameters) where T : BaseEntity
+    private IQueryable<T> GenerateQuery<T>(string? sql, params object[] parameters) where T : BaseEntity
     {
         var set = Set<T>();
 

@@ -72,19 +72,23 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings));
-        var dataContextSettings = services.ConfigureAndGet<DataContextSettings>(configuration, nameof(DataContextSettings));
-        var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings));
+        var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings))!;
+        var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings))!;
 
-        var openWeatherMapSettings = services.ConfigureAndGet<OpenWeatherMapSettings>(configuration, nameof(OpenWeatherMapSettings));
-        var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings));
-        var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings));
+        var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings))!;
+        var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings))!;
 
         var sqlConnectionString = configuration.GetConnectionString("SqlConnection");
         var azureStorageConnectionString = configuration.GetConnectionString("AzureStorageConnection");
 
         var translatorSettingsSection = configuration.GetSection(nameof(TranslatorSettings));
         services.Configure<TranslatorSettings>(translatorSettingsSection);
+
+        var dataContextSettingsSection = configuration.GetSection(nameof(DataContextSettings));
+        var dataContextSettings = dataContextSettingsSection.Get<DataContextSettings>()!;
+
+        var openWeatherMapSettingsSection = configuration.GetSection(nameof(OpenWeatherMapSettings));
+        var openWeatherMapSettings = openWeatherMapSettingsSection.Get<OpenWeatherMapSettings>()!;
 
         services.AddRequestLocalization(appSettings.SupportedCultures);
         services.AddWebOptimizer(minifyCss: true, minifyJavaScript: environment.IsProduction());
@@ -185,19 +189,19 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
                 });
 
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
                 {
-                    new OpenApiSecurityScheme
                     {
-                        Reference = new OpenApiReference
+                        new OpenApiSecurityScheme
                         {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = JwtBearerDefaults.AuthenticationScheme
-                        }
-                    },
-                    Array.Empty<string>()
-                }
-            });
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = JwtBearerDefaults.AuthenticationScheme
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
 
                 options.AddDefaultResponse();
                 options.AddAcceptLanguageHeader();
@@ -257,7 +261,7 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         services.AddFluentEmail(sendinblueSettings.EmailAddress).WithSendinblue();
         services.AddRefitClient<IOpenWeatherMapClient>().ConfigureHttpClient(httpClient =>
         {
-            httpClient.BaseAddress = new Uri(openWeatherMapSettings.SecurityKey);
+            httpClient.BaseAddress = new Uri(openWeatherMapSettings.ServiceUrl);
         })
         .ConfigurePrimaryHttpMessageHandler(_ =>
         {

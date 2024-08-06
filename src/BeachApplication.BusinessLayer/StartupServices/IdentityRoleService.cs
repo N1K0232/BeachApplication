@@ -20,7 +20,13 @@ public class IdentityRoleService : IHostedService
         using var scope = services.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 
-        var roleNames = new string[] { RoleNames.Administrator, RoleNames.PowerUser, RoleNames.User };
+        var roleNames = new string[]
+        {
+            RoleNames.Administrator,
+            RoleNames.PowerUser,
+            RoleNames.User
+        };
+
         foreach (var roleName in roleNames)
         {
             var exists = await roleManager.RoleExistsAsync(roleName);

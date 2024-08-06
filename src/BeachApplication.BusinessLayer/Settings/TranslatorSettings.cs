@@ -2,9 +2,9 @@
 
 public class TranslatorSettings
 {
-    public string SubscriptionKey { get; init; }
+    public string SubscriptionKey { get; init; } = null!;
 
-    public string Region { get; init; }
+    public string Region { get; init; } = null!;
 
-    public string Language { get; init; }
+    public string Language { get; init; } = null!;
 }

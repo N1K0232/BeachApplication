@@ -9,13 +9,13 @@ namespace BeachApplication.BusinessLayer.Providers;
 
 public class AzureTokenProvider : IAzureTokenProvider
 {
-    private string region;
-    private string subscriptionKey;
+    private string region = string.Empty;
+    private string subscriptionKey = string.Empty;
 
-    private string token;
-    private Uri serviceUrl;
+    private string token = string.Empty;
+    private Uri serviceUrl = null!;
 
-    private CancellationTokenSource cancellationTokenSource;
+    private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     private bool disposed = false;
 
     private readonly HttpClient httpClient;
@@ -54,7 +54,7 @@ public class AzureTokenProvider : IAzureTokenProvider
             if (value != subscriptionKey)
             {
                 subscriptionKey = value;
-                token = null;
+                token = null!;
             }
         }
     }
@@ -62,7 +62,6 @@ public class AzureTokenProvider : IAzureTokenProvider
     public async Task<string> GetAccessTokenAsync()
     {
         ThrowIfDisposed();
-        cancellationTokenSource = new CancellationTokenSource();
 
         try
         {
@@ -98,7 +97,7 @@ public class AzureTokenProvider : IAzureTokenProvider
         if (!disposed && disposing)
         {
             cancellationTokenSource.Dispose();
-            cancellationTokenSource = null;
+            cancellationTokenSource = null!;
 
             disposed = true;
         }
@@ -106,6 +105,6 @@ public class AzureTokenProvider : IAzureTokenProvider
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(disposed, GetType().FullName);
+        ObjectDisposedException.ThrowIf(disposed, GetType().FullName!);
     }
 }

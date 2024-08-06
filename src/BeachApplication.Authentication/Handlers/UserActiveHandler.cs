@@ -18,15 +18,23 @@ public class UserActiveHandler : AuthorizationHandler<UserActiveRequirement>
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, UserActiveRequirement requirement)
     {
-        if (context.User.Identity.IsAuthenticated)
+        var isAuthenticated = context.User.Identity?.IsAuthenticated ?? false;
+        if (isAuthenticated)
         {
-            var user = await userManager.FindByNameAsync(context.User.GetUserName());
-            var lockedOut = await userManager.IsLockedOutAsync(user);
-            var securityStamp = context.User.GetClaimValue(ClaimTypes.SerialNumber);
-
-            if (user is not null && !lockedOut && securityStamp == user.SecurityStamp)
+            var userName = context.User.GetClaimValueInternal(ClaimTypes.Name);
+            if (!string.IsNullOrWhiteSpace(userName))
             {
-                context.Succeed(requirement);
+                var user = await userManager.FindByNameAsync(userName);
+                if (user is not null)
+                {
+                    var lockedOut = await userManager.IsLockedOutAsync(user);
+                    var securityStamp = context.User.GetClaimValueInternal(ClaimTypes.SerialNumber);
+
+                    if (!lockedOut && securityStamp == user.SecurityStamp)
+                    {
+                        context.Succeed(requirement);
+                    }
+                }
             }
         }
     }

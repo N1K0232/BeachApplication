@@ -74,7 +74,7 @@ public class ProductsEndpoint : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetListAsync(IProductService productService, HttpContext httpContext, string name = null, string category = null, int pageIndex = 0, int itemsPerPage = 50, string orderBy = "Name, Price")
+    private static async Task<IResult> GetListAsync(IProductService productService, HttpContext httpContext, string? name = null, string? category = null, int pageIndex = 0, int itemsPerPage = 50, string orderBy = "Name, Price")
     {
         var result = await productService.GetListAsync(name, category, pageIndex, itemsPerPage, orderBy);
         return httpContext.CreateResponse(result);

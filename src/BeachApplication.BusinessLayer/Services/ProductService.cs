@@ -44,7 +44,7 @@ public class ProductService(IApplicationDbContext context, ISqlClientCache cache
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
     }
 
-    public async Task<Result<PaginatedList<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy)
+    public async Task<Result<PaginatedList<Product>>> GetListAsync(string? name, string? category, int pageIndex, int itemsPerPage, string orderBy)
     {
         var query = context.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
 

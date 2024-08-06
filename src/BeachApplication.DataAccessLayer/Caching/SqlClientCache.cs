@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -11,17 +12,22 @@ public class SqlClientCache(IDistributedCache distributedCache, IMemoryCache mem
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var content = await distributedCache.GetStringAsync(id.ToString(), cancellationToken);
-        return !string.IsNullOrWhiteSpace(content);
+        var content = await distributedCache.GetAsync(id.ToString(), cancellationToken);
+        return content != null;
     }
 
-    public async Task<T> GetAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
+    public async Task<T?> GetAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
     {
-        var content = await distributedCache.GetStringAsync(id.ToString(), cancellationToken);
+        var content = await distributedCache.GetAsync(id.ToString(), cancellationToken);
+        if (content is null)
+        {
+            return null;
+        }
+
         return await ConvertToEntityAsync<T>(content, cancellationToken);
     }
 
-    public Task<IList<T>> GetListAsync<T>(string key, CancellationToken cancellationToken = default) where T : BaseEntity
+    public Task<IList<T>?> GetListAsync<T>(string key, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -30,7 +36,7 @@ public class SqlClientCache(IDistributedCache distributedCache, IMemoryCache mem
             return Task.FromResult(entities);
         }
 
-        return Task.FromResult<IList<T>>(null);
+        return Task.FromResult<IList<T>?>(null);
     }
 
     public async Task RefreshAsync(Guid id, CancellationToken cancellationToken = default)
@@ -47,8 +53,8 @@ public class SqlClientCache(IDistributedCache distributedCache, IMemoryCache mem
 
     public async Task SetAsync<T>(T entity, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity
     {
-        var content = await ConvertToJsonAsync(entity, cancellationToken);
-        await distributedCache.SetStringAsync(entity.Id.ToString(), content, cancellationToken);
+        var content = await ConvertToBytesAsync(entity, cancellationToken);
+        await distributedCache.SetAsync(entity.Id.ToString(), content, cancellationToken);
     }
 
     public Task SetAsync<T>(string key, IList<T> entities, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity
@@ -59,19 +65,19 @@ public class SqlClientCache(IDistributedCache distributedCache, IMemoryCache mem
         return Task.CompletedTask;
     }
 
-    private static Task<string> ConvertToJsonAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
+    private static Task<byte[]> ConvertToBytesAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var content = JsonSerializer.Serialize(entity);
+        var content = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(entity));
         return Task.FromResult(content);
     }
 
-    private static Task<T> ConvertToEntityAsync<T>(string content, CancellationToken cancellationToken = default) where T : BaseEntity
+    private static async Task<T?> ConvertToEntityAsync<T>(byte[] content, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entity = JsonSerializer.Deserialize<T>(content);
-        return Task.FromResult(entity);
+        using var stream = new MemoryStream(content);
+        return await JsonSerializer.DeserializeAsync<T>(stream, cancellationToken: cancellationToken);
     }
 }

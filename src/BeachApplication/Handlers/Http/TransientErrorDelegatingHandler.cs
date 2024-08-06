@@ -2,15 +2,8 @@
 
 namespace BeachApplication.Handlers.Http;
 
-public class TransientErrorDelegatingHandler : DelegatingHandler
+public class TransientErrorDelegatingHandler(ResiliencePipelineProvider<string> provider) : DelegatingHandler
 {
-    private readonly ResiliencePipelineProvider<string> provider;
-
-    public TransientErrorDelegatingHandler(ResiliencePipelineProvider<string> provider)
-    {
-        this.provider = provider;
-    }
-
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var pipeline = provider.GetPipeline<HttpResponseMessage>("http");

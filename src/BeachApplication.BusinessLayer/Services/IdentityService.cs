@@ -35,8 +35,12 @@ public class IdentityService : IIdentityService
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request)
     {
         var user = await userManager.FindByNameAsync(request.UserName);
-        var isEmailConfirmed = await userManager.IsEmailConfirmedAsync(user);
+        if (user is null)
+        {
+            return Result.Fail(FailureReasons.ItemNotFound, "No user found");
+        }
 
+        var isEmailConfirmed = await userManager.IsEmailConfirmedAsync(user);
         if (!isEmailConfirmed)
         {
             return Result.Fail(FailureReasons.ClientError, "Your account isn't verified", "Please verify your email");
@@ -53,8 +57,8 @@ public class IdentityService : IIdentityService
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.GivenName, user.FirstName),
                 new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.UserName!),
+                new Claim(ClaimTypes.Email, user.Email!),
                 new Claim(ClaimTypes.SerialNumber, user.SecurityStamp ?? string.Empty)
             }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
@@ -190,7 +194,7 @@ public class IdentityService : IIdentityService
         return Result.Fail(FailureReasons.ClientError, result.GetErrors());
     }
 
-    private Task<ClaimsPrincipal> ValidateAsync(string accessToken)
+    private Task<ClaimsPrincipal?> ValidateAsync(string accessToken)
     {
         var parameters = new TokenValidationParameters
         {
@@ -212,13 +216,13 @@ public class IdentityService : IIdentityService
             var user = tokenHandler.ValidateToken(accessToken, parameters, out var securityToken);
             if (securityToken is JwtSecurityToken jwtSecurityToken && jwtSecurityToken.Header.Alg == SecurityAlgorithms.HmacSha256)
             {
-                return Task.FromResult(user);
+                return Task.FromResult<ClaimsPrincipal?>(user);
             }
         }
         catch
         {
         }
 
-        return null;
+        return Task.FromResult<ClaimsPrincipal?>(null);
     }
 }

@@ -23,9 +23,9 @@ public class TranslatorClient : ITranslatorClient
     private readonly HttpClient httpClient;
     private readonly IAzureTokenProvider azureTokenProvider;
 
-    private CancellationTokenSource cancellationTokenSource;
+    private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     private bool disposed = false;
-    private string authorizationHeaderValue;
+    private string authorizationHeaderValue = string.Empty;
 
     public TranslatorClient(HttpClient httpClient, IAzureTokenProvider azureTokenProvider, IOptions<TranslatorSettings> translatorSettingsOptions)
     {
@@ -47,29 +47,24 @@ public class TranslatorClient : ITranslatorClient
         set => azureTokenProvider.Region = value;
     }
 
-    public string Language { get; set; }
+    public string Language { get; set; } = string.Empty;
 
-    public async Task<DetectedLanguageResponse> DetectLanguageAsync(string input)
+    public async Task<DetectedLanguageResponse?> DetectLanguageAsync(string input)
     {
         ThrowIfDisposed();
-
-        cancellationTokenSource = new CancellationTokenSource();
-        var languages = await DetectLanguagesCoreAsync([input], cancellationTokenSource.Token);
-        return languages.FirstOrDefault();
+        return (await DetectLanguagesCoreAsync([input])).FirstOrDefault();
     }
 
     public async Task<IEnumerable<DetectedLanguageResponse>> DetectLanguagesAsync(IEnumerable<string> input)
     {
         ThrowIfDisposed();
-
-        cancellationTokenSource = new CancellationTokenSource();
-        return await DetectLanguagesCoreAsync(input, cancellationTokenSource.Token);
+        return await DetectLanguagesCoreAsync(input);
     }
 
-    private async Task<IEnumerable<DetectedLanguageResponse>> DetectLanguagesCoreAsync(IEnumerable<string> input, CancellationToken cancellationToken)
+    private async Task<IEnumerable<DetectedLanguageResponse>> DetectLanguagesCoreAsync(IEnumerable<string> input)
     {
-        ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(input, nameof(input));
+        cancellationTokenSource = new CancellationTokenSource();
 
         if (!input.Any())
         {
@@ -89,16 +84,17 @@ public class TranslatorClient : ITranslatorClient
             Text = t.Substring(0, Math.Min(t.Length, MaxTextLengthForDetection))
         }));
 
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationTokenSource.Token);
         if (response.IsSuccessStatusCode)
         {
-            return await response.Content.ReadFromJsonAsync<IEnumerable<DetectedLanguageResponse>>(cancellationToken);
+            var detectedLanguageResponses = await response.Content.ReadFromJsonAsync<IEnumerable<DetectedLanguageResponse>>(cancellationTokenSource.Token);
+            return detectedLanguageResponses ?? [];
         }
 
         throw await HttpClientException.ReadFromResponseAsync(response);
     }
 
-    public async Task<IEnumerable<ServiceLanguage>> GetLanguagesAsync(string language = null)
+    public async Task<IEnumerable<ServiceLanguage>> GetLanguagesAsync(string? language = null)
     {
         ThrowIfDisposed();
 
@@ -111,8 +107,7 @@ public class TranslatorClient : ITranslatorClient
         var requestLanguage = language.GetValueOrDefault(Language);
         if (requestLanguage.HasValue())
         {
-            // If necessary, adds the Accept-Language header in order to get localized language names.
-            request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue(language));
+            request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue(requestLanguage));
         }
 
         using var response = await httpClient.SendAsync(request, cancellationTokenSource.Token);
@@ -122,7 +117,7 @@ public class TranslatorClient : ITranslatorClient
             using var jsonDocument = await JsonDocument.ParseAsync(contentStream, cancellationToken: cancellationTokenSource.Token);
 
             var jsonContent = jsonDocument.RootElement.GetProperty("translation");
-            var responseContent = JsonSerializer.Deserialize<Dictionary<string, ServiceLanguage>>(jsonContent.ToString()).ToList();
+            var responseContent = JsonSerializer.Deserialize<Dictionary<string, ServiceLanguage>>(jsonContent.ToString())?.ToList() ?? [];
 
             responseContent.ForEach(r => r.Value.Code = r.Key);
             return responseContent.Select(r => r.Value).OrderBy(r => r.Name).ToList();
@@ -131,33 +126,28 @@ public class TranslatorClient : ITranslatorClient
         throw await HttpClientException.ReadFromResponseAsync(response);
     }
 
-    public async Task<TranslationResponse> TranslateAsync(string input, IEnumerable<string> to)
+    public async Task<TranslationResponse?> TranslateAsync(string input, IEnumerable<string> to)
     {
         ThrowIfDisposed();
-
-        cancellationTokenSource = new CancellationTokenSource();
-        return (await TranslateCoreAsync([input], null, to, cancellationTokenSource.Token)).FirstOrDefault();
+        return (await TranslateCoreAsync([input], null, to)).FirstOrDefault();
     }
 
-    public async Task<TranslationResponse> TranslateAsync(string input, string from, IEnumerable<string> to = null)
+    public async Task<TranslationResponse?> TranslateAsync(string input, string from, IEnumerable<string>? to = null)
     {
         ThrowIfDisposed();
-
-        cancellationTokenSource = new CancellationTokenSource();
-        return (await TranslateCoreAsync([input], from, to, cancellationTokenSource.Token)).FirstOrDefault();
+        return (await TranslateCoreAsync([input], from, to)).FirstOrDefault();
     }
 
-    public async Task<IEnumerable<TranslationResponse>> TranslateAsync(IEnumerable<string> input, string from, IEnumerable<string> to)
+    public async Task<IEnumerable<TranslationResponse>> TranslateAsync(IEnumerable<string> input, string from, IEnumerable<string>? to)
     {
         ThrowIfDisposed();
-
-        cancellationTokenSource = new CancellationTokenSource();
-        return await TranslateCoreAsync(input, from, to, cancellationTokenSource.Token);
+        return await TranslateCoreAsync(input, from, to);
     }
 
-    private async Task<IEnumerable<TranslationResponse>> TranslateCoreAsync(IEnumerable<string> input, string from, IEnumerable<string> to, CancellationToken cancellationToken)
+    private async Task<IEnumerable<TranslationResponse>> TranslateCoreAsync(IEnumerable<string> input, string? from, IEnumerable<string>? to)
     {
         ArgumentNullException.ThrowIfNull(input, nameof(input));
+        cancellationTokenSource = new CancellationTokenSource();
 
         if (input.Count() > MaxArrayLengthForTranslation)
         {
@@ -180,11 +170,12 @@ public class TranslatorClient : ITranslatorClient
         var uriString = (string.IsNullOrWhiteSpace(from) ? $"{ClientValues.BaseUrl}translate?{toQueryString}" : $"{ClientValues.BaseUrl}translate?from={from}&{toQueryString}") + $"&{ClientValues.ApiVersion}";
 
         using var request = CreateHttpRequest(uriString, HttpMethod.Post, input.Select(t => new { Text = t }));
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await httpClient.SendAsync(request, cancellationTokenSource.Token);
 
         if (response.IsSuccessStatusCode)
         {
-            return await response.Content.ReadFromJsonAsync<IEnumerable<TranslationResponse>>(cancellationToken: cancellationToken);
+            var translationResponses = await response.Content.ReadFromJsonAsync<IEnumerable<TranslationResponse>>(cancellationToken: cancellationTokenSource.Token);
+            return translationResponses ?? [];
         }
 
         throw await HttpClientException.ReadFromResponseAsync(response);
@@ -204,7 +195,7 @@ public class TranslatorClient : ITranslatorClient
 
     private HttpRequestMessage CreateHttpRequest(string uriString) => CreateHttpRequest(uriString, HttpMethod.Get);
 
-    private HttpRequestMessage CreateHttpRequest(string uriString, HttpMethod method, object content = null)
+    private HttpRequestMessage CreateHttpRequest(string uriString, HttpMethod method, object? content = null)
     {
         var request = new HttpRequestMessage(method, new Uri(uriString))
         {
@@ -226,7 +217,7 @@ public class TranslatorClient : ITranslatorClient
         if (!disposed && disposing)
         {
             cancellationTokenSource.Dispose();
-            cancellationTokenSource = null;
+            cancellationTokenSource = null!;
 
             disposed = true;
         }
@@ -234,6 +225,6 @@ public class TranslatorClient : ITranslatorClient
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(disposed, GetType().FullName);
+        ObjectDisposedException.ThrowIf(disposed, GetType().FullName!);
     }
 }

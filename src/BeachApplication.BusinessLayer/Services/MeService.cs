@@ -23,6 +23,11 @@ public class MeService : IMeService
         var userName = await userService.GetUserNameAsync();
         var user = await userManager.FindByNameAsync(userName);
 
-        return new User(user.Id, user.FirstName, user.LastName, user.Email);
+        if (user is null)
+        {
+            return Result.Fail(FailureReasons.ItemNotFound, "No user found");
+        }
+
+        return new User(user.Id, user.FirstName, user.LastName, user.Email!);
     }
 }

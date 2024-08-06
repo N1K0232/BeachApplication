@@ -6,15 +6,8 @@ using OperationResults;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class WeatherService : IWeatherService
+public class WeatherService(IOpenWeatherMapClient openWeatherMapClient) : IWeatherService
 {
-    private readonly IOpenWeatherMapClient openWeatherMapClient;
-
-    public WeatherService(IOpenWeatherMapClient openWeatherMapClient)
-    {
-        this.openWeatherMapClient = openWeatherMapClient;
-    }
-
     public async Task<Result<Weather>> SearchAsync(string city)
     {
         var response = await openWeatherMapClient.SearchAsync(city);
@@ -27,6 +20,6 @@ public class WeatherService : IWeatherService
         }
 
         var error = await response.Error.GetContentAsAsync<Error>();
-        return Result.Fail(FailureReasons.ClientError, error.Code, error.Message);
+        return Result.Fail(FailureReasons.ClientError, error!.Code, error!.Message);
     }
 }

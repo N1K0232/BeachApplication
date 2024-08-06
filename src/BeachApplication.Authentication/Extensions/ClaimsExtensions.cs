@@ -7,7 +7,7 @@ public static class ClaimsExtensions
 {
     public static Guid GetId(this IPrincipal user)
     {
-        var value = GetClaimValue(user, ClaimTypes.NameIdentifier);
+        var value = GetClaimValueInternal(user, ClaimTypes.NameIdentifier);
         if (Guid.TryParse(value, out var userId))
         {
             return userId;
@@ -16,15 +16,15 @@ public static class ClaimsExtensions
         return Guid.Empty;
     }
 
-    public static string GetUserName(this IPrincipal user)
-        => GetClaimValue(user, ClaimTypes.Name);
+    public static string? GetUserName(this IPrincipal user)
+        => GetClaimValueInternal(user, ClaimTypes.Name);
 
-    public static string GetEmail(this IPrincipal user)
-        => GetClaimValue(user, ClaimTypes.Email);
+    public static string? GetEmail(this IPrincipal user)
+        => GetClaimValueInternal(user, ClaimTypes.Email);
 
-    public static string GetClaimValue(this IPrincipal user, string claimType)
-    {
-        var value = ((ClaimsPrincipal)user).FindFirst(claimType)?.Value;
-        return value;
-    }
+    public static string? GetClaimValue(this IPrincipal user, string claimType)
+        => GetClaimValueInternal(user, claimType);
+
+    internal static string? GetClaimValueInternal(this IPrincipal user, string claimType)
+        => ((ClaimsPrincipal)user).FindFirstValue(claimType);
 }

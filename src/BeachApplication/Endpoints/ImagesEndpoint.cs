@@ -1,6 +1,5 @@
 ﻿using System.Net.Mime;
 using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.Models;
 using BeachApplication.Shared.Models;
 using MinimalHelpers.Routing;
 using OperationResults.AspNetCore.Http;
@@ -80,9 +79,9 @@ public class ImagesEndpoint : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> UploadAsync(IImageService imageService, FormFileContent content, HttpContext httpContext)
+    private static async Task<IResult> UploadAsync(IImageService imageService, IFormFile file, HttpContext httpContext)
     {
-        var result = await imageService.UploadAsync(content.File.FileName, content.File.OpenReadStream(), content.Description, content.Overwrite);
+        var result = await imageService.UploadAsync(file.FileName, file.OpenReadStream());
         return httpContext.CreateResponse(result, "GetImage", new { id = result.Content?.Id });
     }
 }

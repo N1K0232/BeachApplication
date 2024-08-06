@@ -74,7 +74,7 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
         if (order is not null)
         {
             var orderDetails = order.OrderDetails;
-            if (orderDetails.Count > 0)
+            if (orderDetails?.Count > 0)
             {
                 await context.DeleteAsync(orderDetails);
             }

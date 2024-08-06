@@ -6,20 +6,11 @@ using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Filters;
 
-public class ValidatorFilter<T> : IEndpointFilter where T : class
+public class ValidatorFilter<T>(IValidator<T> validator, OperationResultOptions options) : IEndpointFilter where T : class
 {
-    private readonly IValidator<T> validator;
-    private readonly OperationResultOptions options;
-
-    public ValidatorFilter(IValidator<T> validator, OperationResultOptions options)
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        this.validator = validator;
-        this.options = options;
-    }
-
-    public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
-    {
-        if (context.Arguments.FirstOrDefault(a => a.GetType() == typeof(T)) is T input)
+        if (context.Arguments.FirstOrDefault(a => a!.GetType() == typeof(T)) is T input)
         {
             var validationResult = await validator.ValidateAsync(input);
             if (!validationResult.IsValid)

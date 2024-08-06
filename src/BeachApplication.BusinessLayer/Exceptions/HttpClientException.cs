@@ -3,14 +3,15 @@ using TinyHelpers.Extensions;
 
 namespace BeachApplication.BusinessLayer.Exceptions;
 
-public class HttpClientException : Exception
+public class HttpClientException(int code, string message) : Exception(message)
 {
-    public HttpClientException(int code, string message) : base(message)
+    public int Code
     {
-        Code = code;
+        get
+        {
+            return code;
+        }
     }
-
-    public int Code { get; }
 
     public static async Task<HttpClientException> ReadFromResponseAsync(HttpResponseMessage response)
     {
@@ -22,7 +23,7 @@ public class HttpClientException : Exception
             var error = jsonDocument.RootElement.GetProperty("error");
 
             var statusCode = Convert.ToInt32(error.GetProperty("code").GetString());
-            var message = error.GetProperty("message").GetString();
+            var message = error.GetProperty("message").GetString() ?? string.Empty;
 
             return new HttpClientException(statusCode, message);
         }

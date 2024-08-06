@@ -67,17 +67,16 @@ public class ImageService(IApplicationDbContext context, ISqlClientCache cache, 
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
     }
 
-    public async Task<Result<Image>> UploadAsync(string fileName, Stream stream, string description, bool overwrite)
+    public async Task<Result<Image>> UploadAsync(string fileName, Stream stream)
     {
         var path = PathGenerator.CreatePath(fileName);
-        await storageProvider.SaveAsync(path, stream, overwrite);
+        await storageProvider.SaveAsync(path, stream, true);
 
         var image = new Entities.Image
         {
             Path = path,
             Length = stream.Length,
-            ContentType = MimeUtility.GetMimeMapping(fileName),
-            Description = description
+            ContentType = MimeUtility.GetMimeMapping(fileName)
         };
 
         await context.InsertAsync(image);

@@ -10,7 +10,7 @@ public interface ICategoryService
 
     Task<Result<Category>> GetAsync(Guid id);
 
-    Task<Result<IEnumerable<Category>>> GetListAsync(string name, string description);
+    Task<Result<IEnumerable<Category>>> GetListAsync(string? name);
 
     Task<Result<Category>> InsertAsync(SaveCategoryRequest request);
 

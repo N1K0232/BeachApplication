@@ -39,18 +39,13 @@ public class CategoryService(IApplicationDbContext context, ISqlClientCache cach
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
     }
 
-    public async Task<Result<IEnumerable<Category>>> GetListAsync(string name, string description)
+    public async Task<Result<IEnumerable<Category>>> GetListAsync(string? name)
     {
         var query = context.GetData<Entities.Category>();
 
         if (name.HasValue())
         {
             query = query.Where(c => c.Name.Contains(name));
-        }
-
-        if (description.HasValue())
-        {
-            query = query.Where(c => c.Description.Contains(description));
         }
 
         var categories = await query.OrderBy(c => c.Name).ProjectTo<Category>(mapper.ConfigurationProvider).ToListAsync();

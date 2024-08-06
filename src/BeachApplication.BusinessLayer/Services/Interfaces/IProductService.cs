@@ -10,7 +10,7 @@ public interface IProductService
 
     Task<Result<Product>> GetAsync(Guid id);
 
-    Task<Result<PaginatedList<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy);
+    Task<Result<PaginatedList<Product>>> GetListAsync(string? name, string? category, int pageIndex, int itemsPerPage, string orderBy);
 
     Task<Result<Product>> InsertAsync(SaveProductRequest request);
 
