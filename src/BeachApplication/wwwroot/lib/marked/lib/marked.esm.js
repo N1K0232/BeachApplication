@@ -1,5 +1,5 @@
 /**
- * marked v13.0.2 - a markdown parser
+ * marked v14.0.0 - a markdown parser
  * Copyright (c) 2011-2024, Christopher Jeffrey. (MIT Licensed)
  * https://github.com/markedjs/marked
  */
@@ -23,7 +23,7 @@ function _getDefaults() {
         renderer: null,
         silent: false,
         tokenizer: null,
-        walkTokens: null
+        walkTokens: null,
     };
 }
 let _defaults = _getDefaults();
@@ -43,7 +43,7 @@ const escapeReplacements = {
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
-    "'": '&#39;'
+    "'": '&#39;',
 };
 const getEscapeReplacement = (ch) => escapeReplacements[ch];
 function escape$1(html, encode) {
@@ -59,21 +59,6 @@ function escape$1(html, encode) {
     }
     return html;
 }
-const unescapeTest = /&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig;
-function unescape(html) {
-    // explicitly match decimal, hex, and named HTML entities
-    return html.replace(unescapeTest, (_, n) => {
-        n = n.toLowerCase();
-        if (n === 'colon')
-            return ':';
-        if (n.charAt(0) === '#') {
-            return n.charAt(1) === 'x'
-                ? String.fromCharCode(parseInt(n.substring(2), 16))
-                : String.fromCharCode(+n.substring(1));
-        }
-        return '';
-    });
-}
 const caret = /(^|[^\[])\^/g;
 function edit(regex, opt) {
     let source = typeof regex === 'string' ? regex : regex.source;
@@ -87,7 +72,7 @@ function edit(regex, opt) {
         },
         getRegex: () => {
             return new RegExp(source, opt);
-        }
+        },
     };
     return obj;
 }
@@ -95,7 +80,7 @@ function cleanUrl(href) {
     try {
         href = encodeURI(href).replace(/%25/g, '%');
     }
-    catch (e) {
+    catch {
         return null;
     }
     return href;
@@ -206,7 +191,7 @@ function outputLink(cap, link, raw, lexer) {
             href,
             title,
             text,
-            tokens: lexer.inlineTokens(text)
+            tokens: lexer.inlineTokens(text),
         };
         lexer.state.inLink = false;
         return token;
@@ -216,7 +201,7 @@ function outputLink(cap, link, raw, lexer) {
         raw,
         href,
         title,
-        text: escape$1(text)
+        text: escape$1(text),
     };
 }
 function indentCodeCompensation(raw, text) {
@@ -255,7 +240,7 @@ class _Tokenizer {
         if (cap && cap[0].length > 0) {
             return {
                 type: 'space',
-                raw: cap[0]
+                raw: cap[0],
             };
         }
     }
@@ -269,7 +254,7 @@ class _Tokenizer {
                 codeBlockStyle: 'indented',
                 text: !this.options.pedantic
                     ? rtrim(text, '\n')
-                    : text
+                    : text,
             };
         }
     }
@@ -282,7 +267,7 @@ class _Tokenizer {
                 type: 'code',
                 raw,
                 lang: cap[2] ? cap[2].trim().replace(this.rules.inline.anyPunctuation, '$1') : cap[2],
-                text
+                text,
             };
         }
     }
@@ -306,7 +291,7 @@ class _Tokenizer {
                 raw: cap[0],
                 depth: cap[1].length,
                 text,
-                tokens: this.lexer.inline(text)
+                tokens: this.lexer.inline(text),
             };
         }
     }
@@ -315,7 +300,7 @@ class _Tokenizer {
         if (cap) {
             return {
                 type: 'hr',
-                raw: rtrim(cap[0], '\n')
+                raw: rtrim(cap[0], '\n'),
             };
         }
     }
@@ -392,7 +377,7 @@ class _Tokenizer {
                 type: 'blockquote',
                 raw,
                 tokens,
-                text
+                text,
             };
         }
     }
@@ -407,7 +392,7 @@ class _Tokenizer {
                 ordered: isordered,
                 start: isordered ? +bull.slice(0, -1) : '',
                 loose: false,
-                items: []
+                items: [],
             };
             bull = isordered ? `\\d{1,9}\\${bull.slice(-1)}` : `\\${bull}`;
             if (this.options.pedantic) {
@@ -537,7 +522,7 @@ class _Tokenizer {
                     checked: ischecked,
                     loose: false,
                     text: itemContents,
-                    tokens: []
+                    tokens: [],
                 });
                 list.raw += raw;
             }
@@ -573,7 +558,7 @@ class _Tokenizer {
                 block: true,
                 raw: cap[0],
                 pre: cap[1] === 'pre' || cap[1] === 'script' || cap[1] === 'style',
-                text: cap[0]
+                text: cap[0],
             };
             return token;
         }
@@ -589,7 +574,7 @@ class _Tokenizer {
                 tag,
                 raw: cap[0],
                 href,
-                title
+                title,
             };
         }
     }
@@ -610,7 +595,7 @@ class _Tokenizer {
             raw: cap[0],
             header: [],
             align: [],
-            rows: []
+            rows: [],
         };
         if (headers.length !== aligns.length) {
             // header and align columns must be equal, rows can be different.
@@ -635,7 +620,7 @@ class _Tokenizer {
                 text: headers[i],
                 tokens: this.lexer.inline(headers[i]),
                 header: true,
-                align: item.align[i]
+                align: item.align[i],
             });
         }
         for (const row of rows) {
@@ -644,7 +629,7 @@ class _Tokenizer {
                     text: cell,
                     tokens: this.lexer.inline(cell),
                     header: false,
-                    align: item.align[i]
+                    align: item.align[i],
                 };
             }));
         }
@@ -658,7 +643,7 @@ class _Tokenizer {
                 raw: cap[0],
                 depth: cap[2].charAt(0) === '=' ? 1 : 2,
                 text: cap[1],
-                tokens: this.lexer.inline(cap[1])
+                tokens: this.lexer.inline(cap[1]),
             };
         }
     }
@@ -672,7 +657,7 @@ class _Tokenizer {
                 type: 'paragraph',
                 raw: cap[0],
                 text,
-                tokens: this.lexer.inline(text)
+                tokens: this.lexer.inline(text),
             };
         }
     }
@@ -683,7 +668,7 @@ class _Tokenizer {
                 type: 'text',
                 raw: cap[0],
                 text: cap[0],
-                tokens: this.lexer.inline(cap[0])
+                tokens: this.lexer.inline(cap[0]),
             };
         }
     }
@@ -693,7 +678,7 @@ class _Tokenizer {
             return {
                 type: 'escape',
                 raw: cap[0],
-                text: escape$1(cap[1])
+                text: escape$1(cap[1]),
             };
         }
     }
@@ -718,7 +703,7 @@ class _Tokenizer {
                 inLink: this.lexer.state.inLink,
                 inRawBlock: this.lexer.state.inRawBlock,
                 block: false,
-                text: cap[0]
+                text: cap[0],
             };
         }
     }
@@ -773,7 +758,7 @@ class _Tokenizer {
             }
             return outputLink(cap, {
                 href: href ? href.replace(this.rules.inline.anyPunctuation, '$1') : href,
-                title: title ? title.replace(this.rules.inline.anyPunctuation, '$1') : title
+                title: title ? title.replace(this.rules.inline.anyPunctuation, '$1') : title,
             }, cap[0], this.lexer);
         }
     }
@@ -788,7 +773,7 @@ class _Tokenizer {
                 return {
                     type: 'text',
                     raw: text,
-                    text
+                    text,
                 };
             }
             return outputLink(cap, link, cap[0], this.lexer);
@@ -840,7 +825,7 @@ class _Tokenizer {
                         type: 'em',
                         raw,
                         text,
-                        tokens: this.lexer.inlineTokens(text)
+                        tokens: this.lexer.inlineTokens(text),
                     };
                 }
                 // Create 'strong' if smallest delimiter has even char count. **a***
@@ -849,7 +834,7 @@ class _Tokenizer {
                     type: 'strong',
                     raw,
                     text,
-                    tokens: this.lexer.inlineTokens(text)
+                    tokens: this.lexer.inlineTokens(text),
                 };
             }
         }
@@ -867,7 +852,7 @@ class _Tokenizer {
             return {
                 type: 'codespan',
                 raw: cap[0],
-                text
+                text,
             };
         }
     }
@@ -876,7 +861,7 @@ class _Tokenizer {
         if (cap) {
             return {
                 type: 'br',
-                raw: cap[0]
+                raw: cap[0],
             };
         }
     }
@@ -887,7 +872,7 @@ class _Tokenizer {
                 type: 'del',
                 raw: cap[0],
                 text: cap[2],
-                tokens: this.lexer.inlineTokens(cap[2])
+                tokens: this.lexer.inlineTokens(cap[2]),
             };
         }
     }
@@ -912,9 +897,9 @@ class _Tokenizer {
                     {
                         type: 'text',
                         raw: text,
-                        text
-                    }
-                ]
+                        text,
+                    },
+                ],
             };
         }
     }
@@ -950,9 +935,9 @@ class _Tokenizer {
                     {
                         type: 'text',
                         raw: text,
-                        text
-                    }
-                ]
+                        text,
+                    },
+                ],
             };
         }
     }
@@ -969,7 +954,7 @@ class _Tokenizer {
             return {
                 type: 'text',
                 raw: cap[0],
-                text
+                text,
             };
         }
     }
@@ -1053,7 +1038,7 @@ const blockNormal = {
     newline,
     paragraph,
     table: noopTest,
-    text: blockText
+    text: blockText,
 };
 /**
  * GFM Block Grammar
@@ -1083,7 +1068,7 @@ const blockGfm = {
         .replace('list', ' {0,3}(?:[*+-]|1[.)]) ') // only lists starting from 1 can interrupt
         .replace('html', '</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)')
         .replace('tag', _tag) // pars can be interrupted by type (6) html blocks
-        .getRegex()
+        .getRegex(),
 };
 /**
  * Pedantic grammar (original John Gruber's loose markdown specification)
@@ -1113,7 +1098,7 @@ const blockPedantic = {
         .replace('|list', '')
         .replace('|html', '')
         .replace('|tag', '')
-        .getRegex()
+        .getRegex(),
 };
 /**
  * Inline-Level Grammar
@@ -1207,7 +1192,7 @@ const inlineNormal = {
     reflinkSearch,
     tag,
     text: inlineText,
-    url: noopTest
+    url: noopTest,
 };
 /**
  * Pedantic Inline Grammar
@@ -1219,7 +1204,7 @@ const inlinePedantic = {
         .getRegex(),
     reflink: edit(/^!?\[(label)\]\s*\[([^\]]*)\]/)
         .replace('label', _inlineLabel)
-        .getRegex()
+        .getRegex(),
 };
 /**
  * GFM Inline Grammar
@@ -1232,7 +1217,7 @@ const inlineGfm = {
         .getRegex(),
     _backpedal: /(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,
     del: /^(~~?)(?=[^\s~])([\s\S]*?[^\s~])\1(?=[^~]|$)/,
-    text: /^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/
+    text: /^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/,
 };
 /**
  * GFM + Line Breaks Inline Grammar
@@ -1243,7 +1228,7 @@ const inlineBreaks = {
     text: edit(inlineGfm.text)
         .replace('\\b_', '\\b_| {2,}\\n')
         .replace(/\{2,\}/g, '*')
-        .getRegex()
+        .getRegex(),
 };
 /**
  * exports
@@ -1251,13 +1236,13 @@ const inlineBreaks = {
 const block = {
     normal: blockNormal,
     gfm: blockGfm,
-    pedantic: blockPedantic
+    pedantic: blockPedantic,
 };
 const inline = {
     normal: inlineNormal,
     gfm: inlineGfm,
     breaks: inlineBreaks,
-    pedantic: inlinePedantic
+    pedantic: inlinePedantic,
 };
 
 /**
@@ -1282,11 +1267,11 @@ class _Lexer {
         this.state = {
             inLink: false,
             inRawBlock: false,
-            top: true
+            top: true,
         };
         const rules = {
             block: block.normal,
-            inline: inline.normal
+            inline: inline.normal,
         };
         if (this.options.pedantic) {
             rules.block = block.pedantic;
@@ -1309,7 +1294,7 @@ class _Lexer {
     static get rules() {
         return {
             block,
-            inline
+            inline,
         };
     }
     /**
@@ -1441,7 +1426,7 @@ class _Lexer {
                 else if (!this.tokens.links[token.tag]) {
                     this.tokens.links[token.tag] = {
                         href: token.href,
-                        title: token.title
+                        title: token.title,
                     };
                 }
                 continue;
@@ -1757,7 +1742,7 @@ class _Renderer {
                     item.tokens.unshift({
                         type: 'text',
                         raw: checkbox + ' ',
-                        text: checkbox + ' '
+                        text: checkbox + ' ',
                     });
                 }
             }
@@ -1993,7 +1978,7 @@ class _Parser {
                             type: 'paragraph',
                             raw: body,
                             text: body,
-                            tokens: [{ type: 'text', raw: body, text: body }]
+                            tokens: [{ type: 'text', raw: body, text: body }],
                         });
                     }
                     else {
@@ -2097,7 +2082,7 @@ class _Hooks {
     static passThroughHooks = new Set([
         'preprocess',
         'postprocess',
-        'processAllTokens'
+        'processAllTokens',
     ]);
     /**
      * Process markdown before marked
@@ -2122,8 +2107,8 @@ class _Hooks {
 class Marked {
     defaults = _getDefaults();
     options = this.setOptions;
-    parse = this.#parseMarkdown(_Lexer.lex, _Parser.parse);
-    parseInline = this.#parseMarkdown(_Lexer.lexInline, _Parser.parseInline);
+    parse = this.parseMarkdown(_Lexer.lex, _Parser.parse);
+    parseInline = this.parseMarkdown(_Lexer.lexInline, _Parser.parseInline);
     Parser = _Parser;
     Renderer = _Renderer;
     TextRenderer = _TextRenderer;
@@ -2251,14 +2236,10 @@ class Marked {
                         continue;
                     }
                     const rendererProp = prop;
-                    let rendererFunc = pack.renderer[rendererProp];
+                    const rendererFunc = pack.renderer[rendererProp];
                     const prevRenderer = renderer[rendererProp];
                     // Replace renderer with func to run extension, but fall back if false
                     renderer[rendererProp] = (...args) => {
-                        if (!pack.useNewRenderer) {
-                            // TODO: Remove this in next major version
-                            rendererFunc = this.#convertRendererFunction(rendererFunc, rendererProp, renderer);
-                        }
                         let ret = rendererFunc.apply(renderer, args);
                         if (ret === false) {
                             ret = prevRenderer.apply(renderer, args);
@@ -2349,215 +2330,6 @@ class Marked {
         });
         return this;
     }
-    // TODO: Remove this in next major release
-    #convertRendererFunction(func, prop, renderer) {
-        switch (prop) {
-            case 'heading':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, renderer.parser.parseInline(token.tokens), token.depth, unescape(renderer.parser.parseInline(token.tokens, renderer.parser.textRenderer)));
-                };
-            case 'code':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.text, token.lang, !!token.escaped);
-                };
-            case 'table':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    let header = '';
-                    // header
-                    let cell = '';
-                    for (let j = 0; j < token.header.length; j++) {
-                        cell += this.tablecell({
-                            text: token.header[j].text,
-                            tokens: token.header[j].tokens,
-                            header: true,
-                            align: token.align[j]
-                        });
-                    }
-                    header += this.tablerow({ text: cell });
-                    let body = '';
-                    for (let j = 0; j < token.rows.length; j++) {
-                        const row = token.rows[j];
-                        cell = '';
-                        for (let k = 0; k < row.length; k++) {
-                            cell += this.tablecell({
-                                text: row[k].text,
-                                tokens: row[k].tokens,
-                                header: false,
-                                align: token.align[k]
-                            });
-                        }
-                        body += this.tablerow({ text: cell });
-                    }
-                    return func.call(this, header, body);
-                };
-            case 'blockquote':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    const body = this.parser.parse(token.tokens);
-                    return func.call(this, body);
-                };
-            case 'list':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    const ordered = token.ordered;
-                    const start = token.start;
-                    const loose = token.loose;
-                    let body = '';
-                    for (let j = 0; j < token.items.length; j++) {
-                        const item = token.items[j];
-                        const checked = item.checked;
-                        const task = item.task;
-                        let itemBody = '';
-                        if (item.task) {
-                            const checkbox = this.checkbox({ checked: !!checked });
-                            if (loose) {
-                                if (item.tokens.length > 0 && item.tokens[0].type === 'paragraph') {
-                                    item.tokens[0].text = checkbox + ' ' + item.tokens[0].text;
-                                    if (item.tokens[0].tokens && item.tokens[0].tokens.length > 0 && item.tokens[0].tokens[0].type === 'text') {
-                                        item.tokens[0].tokens[0].text = checkbox + ' ' + item.tokens[0].tokens[0].text;
-                                    }
-                                }
-                                else {
-                                    item.tokens.unshift({
-                                        type: 'text',
-                                        text: checkbox + ' '
-                                    });
-                                }
-                            }
-                            else {
-                                itemBody += checkbox + ' ';
-                            }
-                        }
-                        itemBody += this.parser.parse(item.tokens, loose);
-                        body += this.listitem({
-                            type: 'list_item',
-                            raw: itemBody,
-                            text: itemBody,
-                            task,
-                            checked: !!checked,
-                            loose,
-                            tokens: item.tokens
-                        });
-                    }
-                    return func.call(this, body, ordered, start);
-                };
-            case 'html':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.text, token.block);
-                };
-            case 'paragraph':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, this.parser.parseInline(token.tokens));
-                };
-            case 'escape':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.text);
-                };
-            case 'link':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.href, token.title, this.parser.parseInline(token.tokens));
-                };
-            case 'image':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.href, token.title, token.text);
-                };
-            case 'strong':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, this.parser.parseInline(token.tokens));
-                };
-            case 'em':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, this.parser.parseInline(token.tokens));
-                };
-            case 'codespan':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.text);
-                };
-            case 'del':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, this.parser.parseInline(token.tokens));
-                };
-            case 'text':
-                return function (token) {
-                    if (!token.type || token.type !== prop) {
-                        // @ts-ignore
-                        // eslint-disable-next-line prefer-rest-params
-                        return func.apply(this, arguments);
-                    }
-                    return func.call(this, token.text);
-                };
-            // do nothing
-        }
-        return func;
-    }
     setOptions(opt) {
         this.defaults = { ...this.defaults, ...opt };
         return this;
@@ -2568,18 +2340,16 @@ class Marked {
     parser(tokens, options) {
         return _Parser.parse(tokens, options ?? this.defaults);
     }
-    #parseMarkdown(lexer, parser) {
-        return (src, options) => {
+    parseMarkdown(lexer, parser) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const parse = (src, options) => {
             const origOpt = { ...options };
             const opt = { ...this.defaults, ...origOpt };
-            // Show warning if an extension set async to true but the parse was called with async: false
+            const throwError = this.onError(!!opt.silent, !!opt.async);
+            // throw error if an extension set async to true but parse was called with async: false
             if (this.defaults.async === true && origOpt.async === false) {
-                if (!opt.silent) {
-                    console.warn('marked(): The async option was set to true by an extension. The async: false option sent to parse will be ignored.');
-                }
-                opt.async = true;
+                return throwError(new Error('marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise.'));
             }
-            const throwError = this.#onError(!!opt.silent, !!opt.async);
             // throw error in case of non string input
             if (typeof src === 'undefined' || src === null) {
                 return throwError(new Error('marked(): input parameter is undefined or null'));
@@ -2621,8 +2391,9 @@ class Marked {
                 return throwError(e);
             }
         };
+        return parse;
     }
-    #onError(silent, async) {
+    onError(silent, async) {
         return (e) => {
             e.message += '\nPlease report this to https://github.com/markedjs/marked.';
             if (silent) {
