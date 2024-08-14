@@ -46,7 +46,7 @@ public class ImagesEndpoint : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         imagesApiGroup.MapPost(string.Empty, UploadAsync)
-            .Accepts<FormFileContent>(MediaTypeNames.Multipart.FormData)
+            .Accepts<IFormFile>(MediaTypeNames.Multipart.FormData)
             .RequireAuthorization("Administrator")
             .Produces<Image>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)

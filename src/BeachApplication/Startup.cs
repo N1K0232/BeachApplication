@@ -51,7 +51,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
-using MinimalHelpers.OpenApi;
 using MinimalHelpers.Routing;
 using OperationResults.AspNetCore.Http;
 using Polly;
@@ -205,7 +204,6 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
 
                 options.AddDefaultResponse();
                 options.AddAcceptLanguageHeader();
-                options.AddFormFile();
             })
             .AddFluentValidationRulesToSwagger(options =>
             {
