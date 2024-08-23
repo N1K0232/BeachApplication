@@ -76,6 +76,7 @@
     <Build Include="dbo\Tables\OrderDetails.sql" />
     <Build Include="dbo\Tables\DataProtectionKeys.sql" />
     <Build Include="dbo\Tables\CacheStore.sql" />
+    <Build Include="dbo\Tables\Subscriptions.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="BeachApplication.Database.publish.xml" />
