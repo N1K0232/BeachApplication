@@ -17,13 +17,13 @@
             </div>
             <div class="remember-forgot">
                 <label><input type="checkbox" x-model="isPersistent" />Remember me</label>
-                <a href="/ResetPassword">Forgot password?</a>
+                <a href="/Accounts/ResetPassword">Forgot password?</a>
             </div>
             <div class="col-auto mt-3">
                 <button class="btn" type="submit" x-on:click="login()" x-bind:disabled="invalidLoginForm() || isBusy">Login</button>
             </div>
             <div class="register-link">
-                <p>Don't you have an account? <a href="/Register">Register</a></p>
+                <p>Don't you have an account? <a href="/Accounts/Register">Register</a></p>
             </div>
         </form>
     </div>
