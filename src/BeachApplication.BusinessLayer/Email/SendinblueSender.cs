@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using sib_api_v3_sdk.Api;
 using sib_api_v3_sdk.Client;
 using sib_api_v3_sdk.Model;
+using TinyHelpers.Extensions;
 
 namespace BeachApplication.BusinessLayer.Email;
 
@@ -27,16 +28,9 @@ public class SendinblueSender : ISender
         try
         {
             var message = await CreateSmtpEmailAsync(email);
-            var result = await sender.SendTransacEmailAsyncWithHttpInfo(message);
+            var result = await sender.SendTransacEmailAsync(message);
 
-            if (result.StatusCode is >= 200 and <= 299)
-            {
-                response.MessageId = result.Data.MessageId;
-            }
-            else
-            {
-                response.ErrorMessages.Add(result.StatusCode.ToString());
-            }
+            response.MessageId = result.MessageId;
         }
         catch (Exception ex)
         {
@@ -49,7 +43,8 @@ public class SendinblueSender : ISender
     private static async Task<SendSmtpEmail> CreateSmtpEmailAsync(IFluentEmail message)
     {
         var content = message.Data;
-        var sender = new SendSmtpEmailSender(!string.IsNullOrWhiteSpace(content.FromAddress.Name) ? content.FromAddress.Name : null, content.FromAddress.EmailAddress);
+        var userName = content.FromAddress.Name.HasValue() ? content.FromAddress.Name : null;
+        var sender = new SendSmtpEmailSender(userName, content.FromAddress.EmailAddress);
 
         var toAddressList = content.ToAddresses.Any() ? content.ToAddresses.Select(a => new SendSmtpEmailTo(a.EmailAddress, a.Name)).ToList() : null;
         var ccAddressList = content.CcAddresses.Any() ? content.CcAddresses.Select(a => new SendSmtpEmailCc(a.EmailAddress, a.Name)).ToList() : null;
@@ -74,7 +69,7 @@ public class SendinblueSender : ISender
 
         if (content.Attachments.Any())
         {
-            email.Attachment = new List<SendSmtpEmailAttachment>();
+            email.Attachment = [];
             foreach (var attachment in content.Attachments)
             {
                 var emailAttachment = await ConvertAttachmentAsync(attachment);

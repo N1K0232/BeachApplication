@@ -10,11 +10,11 @@ public interface IIdentityService
 
     Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request);
 
-    Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request);
+    Task<Result> RegisterAsync(RegisterRequest request);
 
     Task<Result<ResetPasswordResponse>> ResetPasswordAsync(ResetPasswordRequest request);
 
     Task<Result> UpdatePasswordAsync(ChangePasswordRequest request);
 
-    Task<Result> VerifyEmailAsync(VerifyEmailRequest request);
+    Task<Result> VerifyEmailAsync(Guid userId, string token);
 }

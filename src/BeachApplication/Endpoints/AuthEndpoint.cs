@@ -16,18 +16,21 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
             .AllowAnonymous()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .WithName("login")
             .WithOpenApi();
 
         authApiGroup.MapPost("refresh", RefreshTokenAsync)
             .AllowAnonymous()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
+            .WithName("refresh")
             .WithOpenApi();
 
         authApiGroup.MapPost("register", RegisterAsync)
             .AllowAnonymous()
-            .Produces<RegisterResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
+            .WithName("register")
             .WithOpenApi();
 
         authApiGroup.MapPost("resetpassword", ResetPasswordAsync)
@@ -35,6 +38,7 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
             .Produces<ResetPasswordResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("resetpassword")
             .WithOpenApi();
 
         authApiGroup.MapPost("updatepassword", UpdatePasswordAsync)
@@ -42,13 +46,15 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("updatepassword")
             .WithOpenApi();
 
-        authApiGroup.MapPost("verifyemail", VerifyEmailAsync)
+        authApiGroup.MapGet("verifyemail", VerifyEmailAsync)
             .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("verifyemail")
             .WithOpenApi();
     }
 
@@ -82,9 +88,9 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> VerifyEmailAsync(IIdentityService identityService, VerifyEmailRequest request, HttpContext httpContext)
+    private static async Task<IResult> VerifyEmailAsync(IIdentityService identityService, Guid userId, string token, HttpContext httpContext)
     {
-        var result = await identityService.VerifyEmailAsync(request);
+        var result = await identityService.VerifyEmailAsync(userId, token);
         return httpContext.CreateResponse(result);
     }
 }

@@ -3,7 +3,7 @@ using FluentEmail.Core.Interfaces;
 
 namespace BeachApplication.Extensions;
 
-public static class FluentEmailServicesBuilderExtensions
+public static class FluentEmailBuilderExtensions
 {
     public static FluentEmailServicesBuilder WithSendinblue(this FluentEmailServicesBuilder builder)
     {

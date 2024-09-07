@@ -10,7 +10,10 @@ using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
+using FluentEmail.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OperationResults;
@@ -21,14 +24,23 @@ public class IdentityService : IIdentityService
 {
     private readonly UserManager<ApplicationUser> userManager;
     private readonly SignInManager<ApplicationUser> signInManager;
+    private readonly IFluentEmail fluentEmail;
+    private readonly LinkGenerator linkGenerator;
+    private readonly IHttpContextAccessor httpContextAccessor;
     private readonly JwtSettings jwtSettings;
 
     public IdentityService(UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        IFluentEmail fluentEmail,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
         IOptions<JwtSettings> jwtSettingsOptions)
     {
         this.userManager = userManager;
         this.signInManager = signInManager;
+        this.fluentEmail = fluentEmail;
+        this.linkGenerator = linkGenerator;
+        this.httpContextAccessor = httpContextAccessor;
         jwtSettings = jwtSettingsOptions.Value;
     }
 
@@ -93,7 +105,7 @@ public class IdentityService : IIdentityService
         return Result.Fail(FailureReasons.ClientError, "Couldn't validate access token", "Couldn't validate access token");
     }
 
-    public async Task<Result<RegisterResponse>> RegisterAsync(RegisterRequest request)
+    public async Task<Result> RegisterAsync(RegisterRequest request)
     {
         var user = new ApplicationUser
         {
@@ -106,8 +118,8 @@ public class IdentityService : IIdentityService
         var result = await userManager.CreateAsync(user, request.Password);
         if (result.Succeeded)
         {
-            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-            return new RegisterResponse(token);
+            await SendVerificationEmailAsync(user);
+            return Result.Ok();
         }
 
         return Result.Fail(FailureReasons.ClientError, "Couldn't registrate", result.GetErrors());
@@ -137,12 +149,12 @@ public class IdentityService : IIdentityService
         return Result.Fail(FailureReasons.ItemNotFound, "User not found", "User not found");
     }
 
-    public async Task<Result> VerifyEmailAsync(VerifyEmailRequest request)
+    public async Task<Result> VerifyEmailAsync(Guid userId, string token)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
+        var user = await userManager.FindByIdAsync(userId.ToString());
         if (user is not null)
         {
-            var result = await userManager.ConfirmEmailAsync(user, request.Token);
+            var result = await userManager.ConfirmEmailAsync(user, token);
             var isEmailConfirmed = await userManager.IsEmailConfirmedAsync(user);
 
             if (result.Succeeded && isEmailConfirmed)
@@ -192,6 +204,25 @@ public class IdentityService : IIdentityService
         }
 
         return Result.Fail(FailureReasons.ClientError, result.GetErrors());
+    }
+
+    private async Task SendVerificationEmailAsync(ApplicationUser user)
+    {
+        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        var httpContext = httpContextAccessor.HttpContext!;
+
+        var scheme = httpContext.Request.Scheme;
+        var values = new RouteValueDictionary
+        {
+            ["userId"] = user.Id,
+            ["token"] = token
+        };
+
+        var confirmationLink = linkGenerator.GetUriByRouteValues(httpContext, "verifyemail", values, scheme);
+        var response = await fluentEmail.To(user.Email)
+            .Subject("Confirm your email")
+            .Body($"Please confirm your email by clicking this link: <a href='{confirmationLink}'>Confirm Email</a>", true)
+            .SendAsync();
     }
 
     private Task<ClaimsPrincipal?> ValidateAsync(string accessToken)

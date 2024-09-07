@@ -74,7 +74,7 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         var appSettings = services.ConfigureAndGet<AppSettings>(configuration, nameof(AppSettings))!;
         var jwtSettings = services.ConfigureAndGet<JwtSettings>(configuration, nameof(JwtSettings))!;
 
-        var sendinblueSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings))!;
+        var emailSettings = services.ConfigureAndGet<SendinblueSettings>(configuration, nameof(SendinblueSettings))!;
         var swaggerSettings = services.ConfigureAndGet<SwaggerSettings>(configuration, nameof(SwaggerSettings))!;
 
         var sqlConnectionString = configuration.GetConnectionString("SqlConnection");
@@ -93,8 +93,9 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         services.AddWebOptimizer(minifyCss: true, minifyJavaScript: environment.IsProduction());
 
         services.AddHttpContextAccessor();
-        services.AddMemoryCache();
+        services.AddRouting();
 
+        services.AddMemoryCache();
         services.AddDistributedSqlServerCache(options =>
         {
             options.ConnectionString = sqlConnectionString;
@@ -256,7 +257,7 @@ public class Startup(IConfiguration configuration, IWebHostEnvironment environme
         services.AddTransient<TransientErrorDelegatingHandler>();
         services.AddHttpClient("http").AddHttpMessageHandler<TransientErrorDelegatingHandler>();
 
-        services.AddFluentEmail(sendinblueSettings.EmailAddress).WithSendinblue();
+        services.AddFluentEmail(emailSettings.EmailAddress).WithSendinblue();
         services.AddRefitClient<IOpenWeatherMapClient>().ConfigureHttpClient(httpClient =>
         {
             httpClient.BaseAddress = new Uri(openWeatherMapSettings.ServiceUrl);

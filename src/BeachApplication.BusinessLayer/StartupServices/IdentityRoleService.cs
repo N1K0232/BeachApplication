@@ -6,27 +6,14 @@ using Microsoft.Extensions.Hosting;
 
 namespace BeachApplication.BusinessLayer.StartupServices;
 
-public class IdentityRoleService : IHostedService
+public class IdentityRoleService(IServiceProvider services) : IHostedService
 {
-    private readonly IServiceProvider services;
-
-    public IdentityRoleService(IServiceProvider services)
-    {
-        this.services = services;
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = services.CreateScope();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 
-        var roleNames = new string[]
-        {
-            RoleNames.Administrator,
-            RoleNames.PowerUser,
-            RoleNames.User
-        };
-
+        var roleNames = new string[] { RoleNames.Administrator, RoleNames.PowerUser, RoleNames.User };
         foreach (var roleName in roleNames)
         {
             var exists = await roleManager.RoleExistsAsync(roleName);

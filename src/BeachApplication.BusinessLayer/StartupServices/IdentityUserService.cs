@@ -1,5 +1,6 @@
 ﻿using BeachApplication.Authentication;
 using BeachApplication.Authentication.Entities;
+using BeachApplication.Authentication.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,18 +29,25 @@ public class IdentityUserService(IServiceProvider services, IConfiguration confi
             UserName = powerUserSection["Email"]
         };
 
-        await CreateAsync(administratorUser, administratorUserSection["Password"]!, RoleNames.Administrator, RoleNames.User);
-        await CreateAsync(powerUser, powerUserSection["Password"]!, RoleNames.PowerUser, RoleNames.User);
+        var administratorUserPassword = administratorUserSection["Password"] ?? throw new ApplicationException("Password not set");
+        var powerUserPassword = powerUserSection["Password"] ?? throw new ApplicationException("Password not set");
+
+        await CreateAsync(administratorUser, administratorUserPassword, [RoleNames.Administrator, RoleNames.User]);
+        await CreateAsync(powerUser, powerUserPassword, [RoleNames.PowerUser, RoleNames.User]);
     }
 
-    private async Task CreateAsync(ApplicationUser user, string password, params string[] roles)
+    private async Task CreateAsync(ApplicationUser user, string password, IEnumerable<string> roles)
     {
         using var scope = services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-        var result = await userManager.CreateAsync(user, password);
-        if (result.Succeeded)
+        var userExists = await userManager.UserExistsAsync(user.UserName);
+        if (!userExists)
         {
+            await userManager.CreateAsync(user, password);
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            await userManager.ConfirmEmailAsync(user, token);
             await userManager.AddToRolesAsync(user, roles);
         }
     }
