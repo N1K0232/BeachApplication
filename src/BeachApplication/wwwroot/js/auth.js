@@ -146,18 +146,28 @@
         register: async function () {
             this.isBusy = true;
 
-            if (!this.checkPassword()) {
+            if (!checkPassword(this.password, this.confirmPassword)) {
                 this.passwordErrorMessage = "the passwords aren't matching";
                 this.isBusy = false;
                 return;
             }
 
+            const firstName = this.firstName;
+            const lastName = this.lastName;
+            const email = this.email;
+            const password = this.password;
+
+            this.firstName = '';
+            this.lastName = '';
+            this.email = '';
+            this.password = '';
+
             try {
                 var request = {
-                    firstName: this.firstName,
-                    lastName: this.lastName,
-                    email: this.email,
-                    password: this.password
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    password: password
                 };
 
                 var response = await fetch('/api/auth/register', {
@@ -173,8 +183,7 @@
                 var errorMessage = GetErrorMessage(response.status, content);
 
                 if (errorMessage == null) {
-                    window.localStorage.setItem('verify_email_token', content.token);
-                    window.location.href = '/Accounts/VerifyEmail';
+                    window.location.href = '/Accounts/Login';
                 }
                 else {
                     alert(errorMessage);
@@ -225,17 +234,24 @@
         updatePassword: async function () {
             this.isBusy = true;
 
-            if (!this.checkPassword()) {
+            if (!checkPassword(this.password, this.confirmPassword)) {
                 this.passwordErrorMessage = "the passwords aren't matching";
                 this.isBusy = false;
                 return;
             }
 
+            const email = this.email;
+            const password = this.password;
+
+            this.email = '';
+            this.password = '';
+            this.confirmPassword = '';
+
             try {
                 var token = window.localStorage.getItem('reset_password_token');
                 var request = {
-                    email: this.email,
-                    password: this.password,
+                    email: email,
+                    password: password,
                     token: token
                 };
 
@@ -265,43 +281,6 @@
             }
         },
 
-        verifyEmail: async function () {
-            this.isBusy = true;
-
-            try {
-                var token = window.localStorage.getItem('verify_email_token');
-                var request = {
-                    email: this.email,
-                    token: token
-                };
-
-                var response = await fetch('/api/auth/verifyemail', {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept-Language": language
-                    },
-                    body: JSON.stringify(request)
-                });
-
-                var content = await response.json();
-                var errorMessage = GetErrorMessage(response.status, content);
-
-                if (errorMessage == null) {
-                    window.location.href = '/';
-                }
-                else {
-                    alert(errorMessage);
-                }
-
-            } catch (error) {
-                alert(error);
-            }
-            finally {
-                this.isBusy = false;
-            }
-        },
-
         invalidLoginForm: function () {
             return this.userName.trim().length === 0 && this.password.trim().length === 0;
         },
@@ -310,10 +289,10 @@
             return this.firstName.trim().length === 0 && this.lastName.trim().length === 0
                 && this.email.trim().length === 0 && this.password.trim().length === 0
                 && this.confirmPassword.trim().length === 0;
-        },
-
-        checkPassword: function () {
-            return this.confirmPassword.trim().toUpperCase() === this.password.trim().toUpperCase();
         }
     }));
+}
+
+function checkPassword(password, confirmPassword) {
+    return confirmPassword.trim().toUpperCase() === password.trim().toUpperCase();
 }
