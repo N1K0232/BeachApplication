@@ -5,16 +5,27 @@ using BeachApplication.DataAccessLayer.Entities.Common;
 using EntityFramework.Exceptions.SqlServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.Extensions.Logging;
 
 namespace BeachApplication.DataAccessLayer;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ISqlClientCache cache) : AuthenticationDbContext(options), IApplicationDbContext
+public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext
 {
     private static readonly MethodInfo setQueryFilterOnDeletableEntity = typeof(ApplicationDbContext)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(t => t.IsGenericMethod && t.Name == nameof(SetQueryFilterOnDeletableEntity));
 
+    private readonly ISqlClientCache cache;
+    private readonly ILogger<ApplicationDbContext> logger;
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+        ISqlClientCache cache,
+        ILogger<ApplicationDbContext> logger) : base(options)
+    {
+        this.cache = cache;
+        this.logger = logger;
+    }
 
     public async Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
@@ -79,7 +90,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 }
 
                 entity.LastModifiedAt = DateTime.UtcNow;
-                await cache.RefreshAsync(entity.Id, tokenSource.Token);
             }
 
             if (entry.State is EntityState.Deleted)
@@ -90,15 +100,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                     deletableEntity.IsDeleted = true;
                     deletableEntity.DeletedAt = DateTime.UtcNow;
                 }
-
-                if (await cache.ExistsAsync(entity.Id, tokenSource.Token))
-                {
-                    await cache.RemoveAsync(entity.Id, tokenSource.Token);
-                }
             }
         }
 
         await SaveChangesAsync(true, tokenSource.Token);
+        await SaveCacheAsync(entries, tokenSource.Token);
     }
 
     public async Task ExecuteTransactionAsync(Func<Task> action)
@@ -143,6 +149,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         }
 
         return methods;
+    }
+
+    private async Task SaveCacheAsync(IEnumerable<EntityEntry> entries, CancellationToken cancellationToken)
+    {
+        foreach (var entry in entries)
+        {
+            if (entry.State is EntityState.Added && entry.Entity is BaseEntity entity)
+            {
+                if (await cache.ExistsAsync(entity.Id, cancellationToken))
+                {
+                    await cache.SetAsync(entity, TimeSpan.FromHours(1), cancellationToken);
+                }
+            }
+        }
     }
 
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity

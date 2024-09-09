@@ -4,7 +4,6 @@ using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Enums;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
@@ -15,12 +14,12 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class OrderService(IApplicationDbContext context, ISqlClientCache cache, IUserService userService, IMapper mapper) : IOrderService
+public class OrderService(IApplicationDbContext db, IUserService userService, IMapper mapper) : IOrderService
 {
     public async Task<Result<Order>> AddOrderDetailAsync(SaveOrderRequest request)
     {
-        var dbOrder = await context.GetData<Entities.Order>().FirstAsync(o => o.Id == request.OrderId);
-        var dbProduct = await context.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == request.ProductId);
+        var dbOrder = await db.GetData<Entities.Order>().FirstAsync(o => o.Id == request.OrderId);
+        var dbProduct = await db.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == request.ProductId);
 
         if (dbProduct is null)
         {
@@ -32,14 +31,13 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
             dbProduct.Quantity -= request.Quantity;
         }
 
-        await context.ExecuteTransactionAsync(async () =>
+        await db.ExecuteTransactionAsync(async () =>
         {
             var orderDetail = mapper.Map<Entities.OrderDetail>(request);
             orderDetail.Price = Convert.ToDecimal(dbProduct.Price * request.Quantity);
 
-            await context.InsertAsync(orderDetail);
-            await context.SaveAsync();
-            await cache.SetAsync(orderDetail, TimeSpan.FromHours(1));
+            await db.InsertAsync(orderDetail);
+            await db.SaveAsync();
         });
 
         var order = mapper.Map<Order>(dbOrder);
@@ -59,16 +57,15 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
             OrderTime = DateTime.UtcNow.ToTimeOnly(),
         };
 
-        await context.InsertAsync(dbOrder);
-        await context.SaveAsync();
+        await db.InsertAsync(dbOrder);
+        await db.SaveAsync();
 
-        await cache.SetAsync(dbOrder, TimeSpan.FromHours(1));
         return mapper.Map<Order>(dbOrder);
     }
 
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var query = context.GetData<Entities.Order>(trackingChanges: true);
+        var query = db.GetData<Entities.Order>(trackingChanges: true);
         var order = await query.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.Id == id);
 
         if (order is not null)
@@ -76,13 +73,13 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
             var orderDetails = order.OrderDetails;
             if (orderDetails?.Count > 0)
             {
-                await context.DeleteAsync(orderDetails);
+                await db.DeleteAsync(orderDetails);
             }
 
             order.Status = OrderStatus.Canceled;
-            await context.DeleteAsync(order);
+            await db.DeleteAsync(order);
 
-            await context.SaveAsync();
+            await db.SaveAsync();
             return Result.Ok();
         }
 
@@ -91,7 +88,7 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
 
     public async Task<Result<Order>> GetAsync(Guid id)
     {
-        var query = context.GetData<Entities.Order>();
+        var query = db.GetData<Entities.Order>();
         var dbOrder = await query.FirstOrDefaultAsync(o => o.Id == id);
 
         if (dbOrder is not null)
@@ -107,28 +104,26 @@ public class OrderService(IApplicationDbContext context, ISqlClientCache cache, 
 
     public async Task<Result<PaginatedList<Order>>> GetListAsync(int pageIndex, int itemsPerPage, string orderBy)
     {
-        var query = context.GetData<Entities.Order>();
+        var query = db.GetData<Entities.Order>();
         var totalCount = await query.CountAsync();
 
         var hasNextPage = await query.HasNextPageAsync(pageIndex, itemsPerPage);
         var dbOrders = await query.OrderBy(orderBy).ToListAsync(pageIndex, itemsPerPage);
 
         var orders = mapper.Map<IEnumerable<Order>>(dbOrders).Take(itemsPerPage);
-        await orders.ForEachAsync(LoadOrderDetailsAsync);
+        await orders.ForEachAsync(async (order) =>
+        {
+            order.OrderDetails = await LoadOrderDetailsAsync(order.Id);
+        });
 
         return new PaginatedList<Order>(orders, totalCount, hasNextPage);
     }
 
     private async Task<IEnumerable<OrderDetail>> LoadOrderDetailsAsync(Guid id)
     {
-        var query = context.GetData<Entities.OrderDetail>();
+        var query = db.GetData<Entities.OrderDetail>();
         var orderDetails = await query.Where(o => o.OrderId == id).ToListAsync();
 
         return mapper.Map<IEnumerable<OrderDetail>>(orderDetails);
-    }
-
-    private async Task LoadOrderDetailsAsync(Order order)
-    {
-        order.OrderDetails = await LoadOrderDetailsAsync(order.Id);
     }
 }

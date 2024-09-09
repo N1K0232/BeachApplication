@@ -4,7 +4,6 @@ using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -14,17 +13,17 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class SubscriptionService(IApplicationDbContext context, ISqlClientCache cache, IUserService userService, IMapper mapper) : ISubscriptionService
+public class SubscriptionService(IApplicationDbContext db, IUserService userService, IMapper mapper) : ISubscriptionService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var query = context.GetData<Entities.Subscription>(trackingChanges: true);
+        var query = db.GetData<Entities.Subscription>(trackingChanges: true);
         var subscription = await query.FirstOrDefaultAsync(s => s.Id == id);
 
         if (subscription is not null)
         {
-            await context.DeleteAsync(subscription);
-            await context.SaveAsync();
+            await db.DeleteAsync(subscription);
+            await db.SaveAsync();
 
             return Result.Ok();
         }
@@ -34,7 +33,7 @@ public class SubscriptionService(IApplicationDbContext context, ISqlClientCache 
 
     public async Task<Result<Subscription>> GetAsync(Guid id)
     {
-        var dbSubscription = await context.GetAsync<Entities.Subscription>(id);
+        var dbSubscription = await db.GetAsync<Entities.Subscription>(id);
         if (dbSubscription is not null)
         {
             var subscription = mapper.Map<Subscription>(dbSubscription);
@@ -46,7 +45,7 @@ public class SubscriptionService(IApplicationDbContext context, ISqlClientCache 
 
     public async Task<Result<PaginatedList<Subscription>>> GetListAsync(string? userName)
     {
-        var query = context.GetData<Entities.Subscription>().Include(s => s.User).AsQueryable();
+        var query = db.GetData<Entities.Subscription>().Include(s => s.User).AsQueryable();
 
         if (userName.HasValue())
         {
@@ -64,22 +63,21 @@ public class SubscriptionService(IApplicationDbContext context, ISqlClientCache 
         var subscription = mapper.Map<Entities.Subscription>(request);
         subscription.UserId = await userService.GetIdAsync();
 
-        await context.InsertAsync(subscription);
-        await context.SaveAsync();
+        await db.InsertAsync(subscription);
+        await db.SaveAsync();
 
-        await cache.SetAsync(subscription, TimeSpan.FromHours(1));
         return mapper.Map<Subscription>(subscription);
     }
 
     public async Task<Result<Subscription>> UpdateAsync(Guid id, SaveSubscriptionRequest request)
     {
-        var query = context.GetData<Entities.Subscription>(trackingChanges: true);
+        var query = db.GetData<Entities.Subscription>(trackingChanges: true);
         var subscription = await query.FirstOrDefaultAsync(s => s.Id == id);
 
         if (subscription is not null)
         {
             mapper.Map(request, subscription);
-            await context.SaveAsync();
+            await db.SaveAsync();
 
             return mapper.Map<Subscription>(subscription);
         }

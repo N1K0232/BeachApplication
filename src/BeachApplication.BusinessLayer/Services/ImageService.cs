@@ -4,7 +4,6 @@ using BeachApplication.BusinessLayer.Internal;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.StorageProviders;
 using Microsoft.EntityFrameworkCore;
@@ -14,17 +13,17 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ImageService(IApplicationDbContext context, ISqlClientCache cache, IStorageProvider storageProvider, IMapper mapper) : IImageService
+public class ImageService(IApplicationDbContext db, IStorageProvider storageProvider, IMapper mapper) : IImageService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var image = await context.GetAsync<Entities.Image>(id);
+        var image = await db.GetAsync<Entities.Image>(id);
         if (image is not null)
         {
-            await context.DeleteAsync(image);
+            await db.DeleteAsync(image);
             await storageProvider.DeleteAsync(image.Path);
 
-            await context.SaveAsync();
+            await db.SaveAsync();
             return Result.Ok();
         }
 
@@ -33,7 +32,7 @@ public class ImageService(IApplicationDbContext context, ISqlClientCache cache, 
 
     public async Task<Result<Image>> GetAsync(Guid id)
     {
-        var dbImage = await context.GetAsync<Entities.Image>(id);
+        var dbImage = await db.GetAsync<Entities.Image>(id);
         if (dbImage is not null)
         {
             var image = mapper.Map<Image>(dbImage);
@@ -45,7 +44,7 @@ public class ImageService(IApplicationDbContext context, ISqlClientCache cache, 
 
     public async Task<Result<IEnumerable<Image>>> GetListAsync()
     {
-        var images = await context.GetData<Entities.Image>()
+        var images = await db.GetData<Entities.Image>()
             .OrderBy(i => i.Path).ProjectTo<Image>(mapper.ConfigurationProvider)
             .ToListAsync();
 
@@ -54,7 +53,7 @@ public class ImageService(IApplicationDbContext context, ISqlClientCache cache, 
 
     public async Task<Result<StreamFileContent>> ReadAsync(Guid id)
     {
-        var image = await context.GetAsync<Entities.Image>(id);
+        var image = await db.GetAsync<Entities.Image>(id);
         if (image is not null)
         {
             var stream = await storageProvider.ReadAsStreamAsync(image.Path);
@@ -79,10 +78,9 @@ public class ImageService(IApplicationDbContext context, ISqlClientCache cache, 
             ContentType = MimeUtility.GetMimeMapping(fileName)
         };
 
-        await context.InsertAsync(image);
-        await context.SaveAsync();
+        await db.InsertAsync(image);
+        await db.SaveAsync();
 
-        await cache.SetAsync(image, TimeSpan.FromHours(1));
         return mapper.Map<Image>(image);
     }
 }
