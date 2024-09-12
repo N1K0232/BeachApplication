@@ -5,9 +5,9 @@ namespace BeachApplication.Authentication.Extensions;
 
 public static class UserManagerExtensions
 {
-    public static async Task<bool> UserExistsAsync(this UserManager<ApplicationUser> userManager, string? userName)
+    public static async Task<bool> UserExistsAsync(this UserManager<ApplicationUser> userManager, string userName)
     {
-        if (userName is null)
+        if (string.IsNullOrWhiteSpace(userName))
         {
             return false;
         }

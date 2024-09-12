@@ -27,35 +27,25 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         this.logger = logger;
     }
 
-    public async Task DeleteAsync<T>(T entity) where T : BaseEntity
+    public Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
-        await cache.RemoveAsync(entity.Id, tokenSource.Token);
         Set<T>().Remove(entity);
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
+    public Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
     {
-        foreach (var entity in entities)
-        {
-            await cache.RemoveAsync(entity.Id, tokenSource.Token);
-        }
-
         Set<T>().RemoveRange(entities);
+        return Task.CompletedTask;
     }
 
-    public async Task<T?> GetAsync<T>(Guid id) where T : BaseEntity
+    public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
-        var cachedEntity = await cache.GetAsync<T>(id, tokenSource.Token);
-        if (cachedEntity is not null)
-        {
-            return cachedEntity;
-        }
-
         var entity = await Set<T>().FindAsync([id], tokenSource.Token);
         return entity;
     }
 
-    public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string? sql = null, params object[] parameters) where T : BaseEntity
+    public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity
     {
         var set = GenerateQuery<T>(sql, parameters);
 
@@ -103,8 +93,8 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
             }
         }
 
-        await SaveChangesAsync(true, tokenSource.Token);
-        await SaveCacheAsync(entries, tokenSource.Token);
+        var affectedRows = await SaveChangesAsync(true, tokenSource.Token);
+        logger.LogInformation("saved {affectedRows} in the database", affectedRows);
     }
 
     public async Task ExecuteTransactionAsync(Func<Task> action)
@@ -151,20 +141,6 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         return methods;
     }
 
-    private async Task SaveCacheAsync(IEnumerable<EntityEntry> entries, CancellationToken cancellationToken)
-    {
-        foreach (var entry in entries)
-        {
-            if (entry.State is EntityState.Added && entry.Entity is BaseEntity entity)
-            {
-                if (await cache.ExistsAsync(entity.Id, cancellationToken))
-                {
-                    await cache.SetAsync(entity, TimeSpan.FromHours(1), cancellationToken);
-                }
-            }
-        }
-    }
-
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {
         builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedAt == null);
@@ -189,7 +165,7 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         }
     }
 
-    private IQueryable<T> GenerateQuery<T>(string? sql, params object[] parameters) where T : BaseEntity
+    private IQueryable<T> GenerateQuery<T>(string sql, params object[] parameters) where T : BaseEntity
     {
         var set = Set<T>();
 

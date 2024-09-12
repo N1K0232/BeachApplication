@@ -28,6 +28,6 @@ public class MeService : IMeService
             return Result.Fail(FailureReasons.ItemNotFound, "No user found");
         }
 
-        return new User(user.Id, user.FirstName, user.LastName, user.Email!);
+        return new User(user.Id, user.FirstName, user.LastName, user.Email);
     }
 }

@@ -9,10 +9,9 @@ public class MeEndpoint : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var meApiGroup = endpoints.MapGroup("/api/me");
+        var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization("UserActive");
 
         meApiGroup.MapGet(string.Empty, GetAsync)
-            .RequireAuthorization("UserActive")
             .Produces<User>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)

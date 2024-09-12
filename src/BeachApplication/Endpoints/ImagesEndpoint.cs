@@ -52,6 +52,7 @@ public class ImagesEndpoint : IEndpointRouteHandlerBuilder
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
+            .DisableAntiforgery()
             .WithOpenApi();
     }
 

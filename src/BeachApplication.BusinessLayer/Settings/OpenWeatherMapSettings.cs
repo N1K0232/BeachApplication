@@ -2,7 +2,7 @@
 
 public class OpenWeatherMapSettings
 {
-    public string ServiceUrl { get; init; } = null!;
+    public string ServiceUrl { get; init; }
 
-    public string ApiKey { get; init; } = null!;
+    public string ApiKey { get; init; }
 }

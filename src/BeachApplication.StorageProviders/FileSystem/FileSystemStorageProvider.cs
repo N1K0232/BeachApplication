@@ -1,8 +1,8 @@
 ﻿namespace BeachApplication.StorageProviders.FileSystem;
 
-public class FileSystemStorageClient(FileSystemStorageOptions options) : IStorageClient
+public class FileSystemStorageProvider(FileSystemStorageOptions options) : IStorageProvider
 {
-    public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(string path)
     {
         var fullPath = CreatePath(path);
 
@@ -14,7 +14,7 @@ public class FileSystemStorageClient(FileSystemStorageOptions options) : IStorag
         return Task.CompletedTask;
     }
 
-    public Task<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
+    public Task<bool> ExistsAsync(string path)
     {
         var fullPath = CreatePath(path);
         var exists = File.Exists(fullPath);
@@ -22,7 +22,7 @@ public class FileSystemStorageClient(FileSystemStorageOptions options) : IStorag
         return Task.FromResult(exists);
     }
 
-    public Task<Stream?> ReadAsStreamAsync(string path, CancellationToken cancellationToken = default)
+    public Task<Stream?> ReadAsStreamAsync(string path)
     {
         var fullPath = CreatePath(path);
 
@@ -35,7 +35,24 @@ public class FileSystemStorageClient(FileSystemStorageOptions options) : IStorag
         return Task.FromResult<Stream?>(stream);
     }
 
-    public async Task SaveAsync(string path, Stream stream, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(string path, Stream stream, bool overwrite = false)
+    {
+        await CreateDirectoryAsync(path);
+        var outputStream = await CreateFileStreamAsync(path);
+
+        stream.Position = 0;
+
+        await stream.CopyToAsync(outputStream);
+        await outputStream.DisposeAsync();
+    }
+
+    private Task<Stream> CreateFileStreamAsync(string path)
+    {
+        var stream = File.OpenWrite(CreatePath(path));
+        return Task.FromResult<Stream>(stream);
+    }
+
+    private Task CreateDirectoryAsync(string path)
     {
         var fullPath = CreatePath(path);
         var directoryName = Path.GetDirectoryName(fullPath);
@@ -45,16 +62,9 @@ public class FileSystemStorageClient(FileSystemStorageOptions options) : IStorag
             Directory.CreateDirectory(directoryName);
         }
 
-        using var outputStream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write);
-        stream.Position = 0;
-
-        await stream.CopyToAsync(outputStream, cancellationToken);
-        await stream.FlushAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
     private string CreatePath(string path)
-    {
-        var fullPath = Path.Combine(options.StorageFolder, path);
-        return fullPath;
-    }
+        => Path.Combine(options.StorageFolder, path);
 }

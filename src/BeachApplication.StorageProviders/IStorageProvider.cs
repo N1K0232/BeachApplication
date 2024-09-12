@@ -1,6 +1,6 @@
 ﻿namespace BeachApplication.StorageProviders;
 
-public interface IStorageProvider : IDisposable
+public interface IStorageProvider
 {
     Task DeleteAsync(string path);
 

@@ -16,7 +16,7 @@ public class Subscription : DeletableEntity
 
     public SubscriptionStatus Status { get; set; }
 
-    public string? Notes { get; set; }
+    public string Notes { get; set; }
 
-    public virtual ApplicationUser User { get; set; } = null!;
+    public virtual ApplicationUser User { get; set; }
 }

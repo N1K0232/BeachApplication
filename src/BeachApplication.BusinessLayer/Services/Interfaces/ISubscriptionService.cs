@@ -10,7 +10,7 @@ public interface ISubscriptionService
 
     Task<Result<Subscription>> GetAsync(Guid id);
 
-    Task<Result<PaginatedList<Subscription>>> GetListAsync(string? userName);
+    Task<Result<PaginatedList<Subscription>>> GetListAsync(string userName);
 
     Task<Result<Subscription>> InsertAsync(SaveSubscriptionRequest request);
 

@@ -43,7 +43,7 @@ public class ProductService(IApplicationDbContext db, IMapper mapper) : IProduct
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
     }
 
-    public async Task<Result<PaginatedList<Product>>> GetListAsync(string? name, string? category, int pageIndex, int itemsPerPage, string orderBy)
+    public async Task<Result<PaginatedList<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy)
     {
         var query = db.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
 

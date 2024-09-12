@@ -12,9 +12,9 @@ public class OrderDetail : DeletableEntity
 
     public decimal Price { get; set; }
 
-    public IEnumerable<string>? Annotations { get; set; }
+    public IEnumerable<string> Annotations { get; set; }
 
-    public virtual Order Order { get; set; } = null!;
+    public virtual Order Order { get; set; }
 
-    public virtual Product Product { get; set; } = null!;
+    public virtual Product Product { get; set; }
 }

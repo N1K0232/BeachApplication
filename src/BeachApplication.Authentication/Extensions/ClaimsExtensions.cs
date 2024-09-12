@@ -16,15 +16,15 @@ public static class ClaimsExtensions
         return Guid.Empty;
     }
 
-    public static string? GetUserName(this IPrincipal user)
+    public static string GetUserName(this IPrincipal user)
         => GetClaimValueInternal(user, ClaimTypes.Name);
 
-    public static string? GetEmail(this IPrincipal user)
+    public static string GetEmail(this IPrincipal user)
         => GetClaimValueInternal(user, ClaimTypes.Email);
 
-    public static string? GetClaimValue(this IPrincipal user, string claimType)
+    public static string GetClaimValue(this IPrincipal user, string claimType)
         => GetClaimValueInternal(user, claimType);
 
-    internal static string? GetClaimValueInternal(this IPrincipal user, string claimType)
+    internal static string GetClaimValueInternal(this IPrincipal user, string claimType)
         => ((ClaimsPrincipal)user).FindFirstValue(claimType);
 }

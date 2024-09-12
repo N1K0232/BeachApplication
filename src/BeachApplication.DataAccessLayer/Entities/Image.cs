@@ -4,9 +4,9 @@ namespace BeachApplication.DataAccessLayer.Entities;
 
 public class Image : BaseEntity
 {
-    public string Path { get; set; } = null!;
+    public string Path { get; set; }
+
+    public string ContentType { get; set; }
 
     public long Length { get; set; }
-
-    public string ContentType { get; set; } = null!;
 }

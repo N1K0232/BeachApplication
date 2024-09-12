@@ -17,7 +17,7 @@ public class SwaggerBasicAuthenticationMiddleware(RequestDelegate next, IOptions
     {
         if (httpContext.IsSwaggerRequest() && swaggerSettings.UserName.HasValue() && swaggerSettings.Password.HasValue())
         {
-            string? authenticationHeader = httpContext.Request.Headers[HeaderNames.Authorization];
+            string authenticationHeader = httpContext.Request.Headers[HeaderNames.Authorization];
             if (authenticationHeader?.StartsWith("Basic ") ?? false)
             {
                 var header = AuthenticationHeaderValue.Parse(authenticationHeader);

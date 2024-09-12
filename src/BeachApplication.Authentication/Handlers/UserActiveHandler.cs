@@ -22,19 +22,14 @@ public class UserActiveHandler : AuthorizationHandler<UserActiveRequirement>
         if (isAuthenticated)
         {
             var userName = context.User.GetClaimValueInternal(ClaimTypes.Name);
-            if (!string.IsNullOrWhiteSpace(userName))
-            {
-                var user = await userManager.FindByNameAsync(userName);
-                if (user is not null)
-                {
-                    var lockedOut = await userManager.IsLockedOutAsync(user);
-                    var securityStamp = context.User.GetClaimValueInternal(ClaimTypes.SerialNumber);
+            var user = await userManager.FindByNameAsync(userName);
 
-                    if (!lockedOut && securityStamp == user.SecurityStamp)
-                    {
-                        context.Succeed(requirement);
-                    }
-                }
+            var lockedOut = await userManager.IsLockedOutAsync(user);
+            var securityStamp = context.User.GetClaimValueInternal(ClaimTypes.SerialNumber);
+
+            if (!lockedOut && securityStamp == user.SecurityStamp)
+            {
+                context.Succeed(requirement);
             }
         }
     }

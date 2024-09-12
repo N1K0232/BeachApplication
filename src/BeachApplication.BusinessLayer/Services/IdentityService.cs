@@ -225,7 +225,7 @@ public class IdentityService : IIdentityService
             .SendAsync();
     }
 
-    private Task<ClaimsPrincipal?> ValidateAsync(string accessToken)
+    private Task<ClaimsPrincipal> ValidateAsync(string accessToken)
     {
         var parameters = new TokenValidationParameters
         {
@@ -247,13 +247,13 @@ public class IdentityService : IIdentityService
             var user = tokenHandler.ValidateToken(accessToken, parameters, out var securityToken);
             if (securityToken is JwtSecurityToken jwtSecurityToken && jwtSecurityToken.Header.Alg == SecurityAlgorithms.HmacSha256)
             {
-                return Task.FromResult<ClaimsPrincipal?>(user);
+                return Task.FromResult<ClaimsPrincipal>(user);
             }
         }
         catch
         {
         }
 
-        return Task.FromResult<ClaimsPrincipal?>(null);
+        return Task.FromResult<ClaimsPrincipal>(null);
     }
 }

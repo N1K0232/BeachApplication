@@ -74,7 +74,7 @@ public class CategoriesEndpoint : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetListAsync(ICategoryService categoryService, HttpContext httpContext, string? name = null)
+    private static async Task<IResult> GetListAsync(ICategoryService categoryService, HttpContext httpContext, string name = null)
     {
         var result = await categoryService.GetListAsync(name);
         return httpContext.CreateResponse(result);

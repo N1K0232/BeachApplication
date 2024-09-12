@@ -10,31 +10,27 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var authApiGroup = endpoints.MapGroup("/api/auth");
+        var authApiGroup = endpoints.MapGroup("/api/auth").AllowAnonymous();
 
         authApiGroup.MapPost("login", LoginAsync)
-            .AllowAnonymous()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .WithName("login")
             .WithOpenApi();
 
         authApiGroup.MapPost("refresh", RefreshTokenAsync)
-            .AllowAnonymous()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .WithName("refresh")
             .WithOpenApi();
 
         authApiGroup.MapPost("register", RegisterAsync)
-            .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .WithName("register")
             .WithOpenApi();
 
         authApiGroup.MapPost("resetpassword", ResetPasswordAsync)
-            .AllowAnonymous()
             .Produces<ResetPasswordResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
@@ -42,7 +38,6 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         authApiGroup.MapPost("updatepassword", UpdatePasswordAsync)
-            .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
@@ -50,7 +45,6 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         authApiGroup.MapGet("verifyemail", VerifyEmailAsync)
-            .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)

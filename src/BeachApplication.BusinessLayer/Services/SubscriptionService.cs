@@ -43,7 +43,7 @@ public class SubscriptionService(IApplicationDbContext db, IUserService userServ
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, "Subscription", id));
     }
 
-    public async Task<Result<PaginatedList<Subscription>>> GetListAsync(string? userName)
+    public async Task<Result<PaginatedList<Subscription>>> GetListAsync(string userName)
     {
         var query = db.GetData<Entities.Subscription>().Include(s => s.User).AsQueryable();
 

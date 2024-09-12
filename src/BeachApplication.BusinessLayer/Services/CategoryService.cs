@@ -38,7 +38,7 @@ public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICatego
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
     }
 
-    public async Task<Result<IEnumerable<Category>>> GetListAsync(string? name)
+    public async Task<Result<IEnumerable<Category>>> GetListAsync(string name)
     {
         var query = db.GetData<Entities.Category>();
 

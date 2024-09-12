@@ -49,7 +49,7 @@ public class TranslatorClient : ITranslatorClient
 
     public string Language { get; set; } = string.Empty;
 
-    public async Task<DetectedLanguageResponse?> DetectLanguageAsync(string input)
+    public async Task<DetectedLanguageResponse> DetectLanguageAsync(string input)
     {
         ThrowIfDisposed();
         return (await DetectLanguagesCoreAsync([input])).FirstOrDefault();
@@ -94,7 +94,7 @@ public class TranslatorClient : ITranslatorClient
         throw await HttpClientException.ReadFromResponseAsync(response);
     }
 
-    public async Task<IEnumerable<ServiceLanguage>> GetLanguagesAsync(string? language = null)
+    public async Task<IEnumerable<ServiceLanguage>> GetLanguagesAsync(string language = null)
     {
         ThrowIfDisposed();
 
@@ -120,31 +120,31 @@ public class TranslatorClient : ITranslatorClient
             var responseContent = JsonSerializer.Deserialize<Dictionary<string, ServiceLanguage>>(jsonContent.ToString())?.ToList() ?? [];
 
             responseContent.ForEach(r => r.Value.Code = r.Key);
-            return responseContent.Select(r => r.Value).OrderBy(r => r.Name).ToList();
+            return [.. responseContent.Select(r => r.Value).OrderBy(r => r.Name)];
         }
 
         throw await HttpClientException.ReadFromResponseAsync(response);
     }
 
-    public async Task<TranslationResponse?> TranslateAsync(string input, IEnumerable<string> to)
+    public async Task<TranslationResponse> TranslateAsync(string input, IEnumerable<string> to)
     {
         ThrowIfDisposed();
         return (await TranslateCoreAsync([input], null, to)).FirstOrDefault();
     }
 
-    public async Task<TranslationResponse?> TranslateAsync(string input, string from, IEnumerable<string>? to = null)
+    public async Task<TranslationResponse> TranslateAsync(string input, string from, IEnumerable<string> to = null)
     {
         ThrowIfDisposed();
         return (await TranslateCoreAsync([input], from, to)).FirstOrDefault();
     }
 
-    public async Task<IEnumerable<TranslationResponse>> TranslateAsync(IEnumerable<string> input, string from, IEnumerable<string>? to)
+    public async Task<IEnumerable<TranslationResponse>> TranslateAsync(IEnumerable<string> input, string from, IEnumerable<string> to)
     {
         ThrowIfDisposed();
         return await TranslateCoreAsync(input, from, to);
     }
 
-    private async Task<IEnumerable<TranslationResponse>> TranslateCoreAsync(IEnumerable<string> input, string? from, IEnumerable<string>? to)
+    private async Task<IEnumerable<TranslationResponse>> TranslateCoreAsync(IEnumerable<string> input, string from, IEnumerable<string> to)
     {
         ArgumentNullException.ThrowIfNull(input, nameof(input));
         cancellationTokenSource = new CancellationTokenSource();
@@ -195,7 +195,7 @@ public class TranslatorClient : ITranslatorClient
 
     private HttpRequestMessage CreateHttpRequest(string uriString) => CreateHttpRequest(uriString, HttpMethod.Get);
 
-    private HttpRequestMessage CreateHttpRequest(string uriString, HttpMethod method, object? content = null)
+    private HttpRequestMessage CreateHttpRequest(string uriString, HttpMethod method, object content = null)
     {
         var request = new HttpRequestMessage(method, new Uri(uriString))
         {
@@ -217,7 +217,7 @@ public class TranslatorClient : ITranslatorClient
         if (!disposed && disposing)
         {
             cancellationTokenSource.Dispose();
-            cancellationTokenSource = null!;
+            cancellationTokenSource = null;
 
             disposed = true;
         }
@@ -225,6 +225,6 @@ public class TranslatorClient : ITranslatorClient
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(disposed, GetType().FullName!);
+        ObjectDisposedException.ThrowIf(disposed, GetType().FullName);
     }
 }

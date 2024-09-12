@@ -17,20 +17,20 @@ public class IdentityUserService(IServiceProvider services, IConfiguration confi
 
         var administratorUser = new ApplicationUser
         {
-            FirstName = administratorUserSection["FirstName"]!,
+            FirstName = administratorUserSection["FirstName"],
             Email = administratorUserSection["Email"],
             UserName = administratorUserSection["Email"]
         };
 
         var powerUser = new ApplicationUser
         {
-            FirstName = powerUserSection["FirstName"]!,
+            FirstName = powerUserSection["FirstName"],
             Email = powerUserSection["Email"],
             UserName = powerUserSection["Email"]
         };
 
-        var administratorUserPassword = administratorUserSection["Password"] ?? throw new ApplicationException("Password not set");
-        var powerUserPassword = powerUserSection["Password"] ?? throw new ApplicationException("Password not set");
+        var administratorUserPassword = administratorUserSection["Password"];
+        var powerUserPassword = powerUserSection["Password"];
 
         await CreateAsync(administratorUser, administratorUserPassword, [RoleNames.Administrator, RoleNames.User]);
         await CreateAsync(powerUser, powerUserPassword, [RoleNames.PowerUser, RoleNames.User]);

@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -14,18 +15,18 @@ public class SqlClientCache(IDistributedCache cache) : ISqlClientCache
         return content != null;
     }
 
-    public async Task<T?> GetAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
+    public async Task<T> GetAsync<T>(Guid id, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var json = await cache.GetStringAsync(id.ToString(), cancellationToken);
-        if (string.IsNullOrWhiteSpace(json))
+        var bytes = await cache.GetAsync(id.ToString(), cancellationToken);
+        if (bytes is null)
         {
             return null;
         }
 
-        var entity = JsonSerializer.Deserialize<T>(json);
-        return entity;
+        var json = Encoding.UTF8.GetString(bytes);
+        return JsonSerializer.Deserialize<T>(json);
     }
 
     public async Task RefreshAsync(Guid id, CancellationToken cancellationToken = default)
@@ -43,6 +44,8 @@ public class SqlClientCache(IDistributedCache cache) : ISqlClientCache
     public async Task SetAsync<T>(T entity, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity
     {
         var json = JsonSerializer.Serialize(entity);
-        await cache.SetStringAsync(entity.Id.ToString(), json, cancellationToken);
+        var bytes = Encoding.UTF8.GetBytes(json);
+
+        await cache.SetAsync(entity.Id.ToString(), bytes, cancellationToken);
     }
 }

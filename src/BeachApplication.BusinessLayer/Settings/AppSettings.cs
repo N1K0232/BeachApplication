@@ -2,13 +2,13 @@
 
 public class AppSettings
 {
-    public string ApplicationName { get; init; } = null!;
+    public string ApplicationName { get; init; }
 
-    public string ApplicationDescription { get; init; } = null!;
+    public string ApplicationDescription { get; init; }
 
-    public string? ContainerName { get; init; }
+    public string ContainerName { get; init; }
 
-    public string StorageFolder { get; init; } = null!;
+    public string StorageFolder { get; init; }
 
-    public string[] SupportedCultures { get; init; } = null!;
+    public string[] SupportedCultures { get; init; }
 }

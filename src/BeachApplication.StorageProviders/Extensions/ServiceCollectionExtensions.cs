@@ -1,6 +1,4 @@
-﻿using Azure.Storage.Blobs;
-using BeachApplication.StorageProviders.Azure;
-using BeachApplication.StorageProviders.Caching;
+﻿using BeachApplication.StorageProviders.Azure;
 using BeachApplication.StorageProviders.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,11 +14,10 @@ public static class ServiceCollectionExtensions
         var options = new AzureStorageOptions();
         configuration.Invoke(options);
 
-        services.AddScoped(_ => options);
-        services.AddScoped(_ => new BlobServiceClient(options.ConnectionString));
+        services.AddSingleton(options);
+        services.AddScoped<IStorageProvider, AzureStorageProvider>();
 
-        services.AddScoped<IStorageClient, AzureStorageClient>();
-        return AddStorageProvider(services);
+        return services;
     }
 
     public static IServiceCollection AddFileSystemStorage(this IServiceCollection services, Action<FileSystemStorageOptions> configuration)
@@ -31,16 +28,8 @@ public static class ServiceCollectionExtensions
         var options = new FileSystemStorageOptions();
         configuration.Invoke(options);
 
-        services.AddScoped(_ => options);
-        services.AddScoped<IStorageClient, FileSystemStorageClient>();
-
-        return AddStorageProvider(services);
-    }
-
-    private static IServiceCollection AddStorageProvider(IServiceCollection services)
-    {
-        services.AddScoped<IStorageProvider, StorageProvider>();
-        services.AddSingleton<IStorageCache, StorageCache>();
+        services.AddSingleton(options);
+        services.AddScoped<IStorageProvider, FileSystemStorageProvider>();
 
         return services;
     }

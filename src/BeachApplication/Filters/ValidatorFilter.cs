@@ -8,7 +8,7 @@ namespace BeachApplication.Filters;
 
 public class ValidatorFilter<T>(IValidator<T> validator, OperationResultOptions options) : IEndpointFilter where T : class
 {
-    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         if (context.Arguments.FirstOrDefault(a => a!.GetType() == typeof(T)) is T input)
         {

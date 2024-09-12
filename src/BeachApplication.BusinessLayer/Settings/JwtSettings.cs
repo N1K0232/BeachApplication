@@ -2,11 +2,11 @@
 
 public class JwtSettings
 {
-    public string SecurityKey { get; init; } = null!;
+    public string SecurityKey { get; init; }
 
-    public string Issuer { get; init; } = null!;
+    public string Issuer { get; init; }
 
-    public string Audience { get; init; } = null!;
+    public string Audience { get; init; }
 
     public int AccessTokenExpirationMinutes { get; init; }
 
