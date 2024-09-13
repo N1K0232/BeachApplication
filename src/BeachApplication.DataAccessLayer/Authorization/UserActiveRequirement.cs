@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace BeachApplication.Authentication.Requirements;
+namespace BeachApplication.DataAccessLayer.Authorization;
 
 public class UserActiveRequirement : IAuthorizationRequirement
 {

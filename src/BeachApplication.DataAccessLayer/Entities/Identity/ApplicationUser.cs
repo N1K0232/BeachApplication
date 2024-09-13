@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace BeachApplication.Authentication.Entities;
+namespace BeachApplication.DataAccessLayer.Entities.Identity;
 
 public class ApplicationUser : IdentityUser<Guid>
 {
@@ -8,9 +8,9 @@ public class ApplicationUser : IdentityUser<Guid>
 
     public string LastName { get; set; }
 
-    public string RefreshToken { get; set; }
+    public virtual ICollection<Order> Orders { get; set; }
 
-    public DateTime? RefreshTokenExpirationDate { get; set; }
+    public virtual ICollection<Subscription> Subscriptions { get; set; }
 
     public virtual ICollection<ApplicationUserRole> UserRoles { get; set; }
 }

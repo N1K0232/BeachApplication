@@ -16,8 +16,6 @@
     [LockoutEnd]                 DATETIMEOFFSET (7) NULL,
     [LockoutEnabled]             BIT                NOT NULL,
     [AccessFailedCount]          INT                NOT NULL,
-    [RefreshToken]               NVARCHAR(MAX)      NULL,
-    [RefreshTokenExpirationDate] DATETIME           NULL,   
 
     CONSTRAINT [PK_AspNetUsers] PRIMARY KEY CLUSTERED ([Id] ASC)
 );

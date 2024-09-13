@@ -1,13 +1,11 @@
 ﻿using System.Data;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
-using BeachApplication.Authentication;
-using BeachApplication.Authentication.Entities;
-using BeachApplication.Authentication.Extensions;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.BusinessLayer.Settings;
+using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Entities.Identity;
+using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
 using FluentEmail.Core;
@@ -15,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using OperationResults;
 
@@ -74,7 +73,7 @@ public class IdentityService : IIdentityService
                 new Claim(ClaimTypes.SerialNumber, user.SecurityStamp ?? string.Empty)
             }.Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            return await SaveAndGetResponseAsync(user, claims);
+            return CreateToken(claims);
         }
 
         if (signInResult.IsLockedOut)
@@ -84,25 +83,6 @@ public class IdentityService : IIdentityService
 
         await userManager.AccessFailedAsync(user);
         return Result.Fail(FailureReasons.ClientError, "Login failed", "Invalid username or password");
-    }
-
-    public async Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request)
-    {
-        var user = await ValidateAsync(request.AccessToken);
-        if (user is not null)
-        {
-            var userId = user.GetId();
-            var dbUser = await userManager.FindByNameAsync(userId.ToString());
-
-            if (dbUser?.RefreshToken == null || dbUser?.RefreshTokenExpirationDate < DateTime.UtcNow || dbUser?.RefreshToken != request.RefreshToken)
-            {
-                return Result.Fail(FailureReasons.ClientError, "Couldn't validate refresh token", "Couldn't validate refresh token");
-            }
-
-            return await SaveAndGetResponseAsync(dbUser, user.Claims);
-        }
-
-        return Result.Fail(FailureReasons.ClientError, "Couldn't validate access token", "Couldn't validate access token");
     }
 
     public async Task<Result> RegisterAsync(RegisterRequest request)
@@ -169,47 +149,28 @@ public class IdentityService : IIdentityService
         return Result.Fail(FailureReasons.ItemNotFound, "User not found", "User not found");
     }
 
-    private async Task<Result<AuthResponse>> SaveAndGetResponseAsync(ApplicationUser user, IEnumerable<Claim> claims)
+    private AuthResponse CreateToken(IEnumerable<Claim> claims)
     {
-        var securityKey = Encoding.UTF8.GetBytes(jwtSettings.SecurityKey);
-        var randomNumber = new byte[4096];
-
-        var symmetricSecurityKey = new SymmetricSecurityKey(securityKey);
-        var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
-
-        using var generator = RandomNumberGenerator.Create();
-        var jwtSecurityToken = new JwtSecurityToken
-        (
-            jwtSettings.Issuer,
-            jwtSettings.Audience,
-            claims,
-            DateTime.UtcNow,
-            DateTime.UtcNow.AddMinutes(jwtSettings.AccessTokenExpirationMinutes),
-            signingCredentials
-        );
-
-        var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
-        generator.GetBytes(randomNumber);
-
-        var accessToken = jwtSecurityTokenHandler.WriteToken(jwtSecurityToken);
-        var refreshToken = Convert.ToBase64String(randomNumber);
-
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpirationDate = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpirationMinutes);
-
-        var result = await userManager.UpdateAsync(user);
-        if (result.Succeeded)
+        var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecurityKey));
+        var securityTokenDescriptor = new SecurityTokenDescriptor()
         {
-            return new AuthResponse(accessToken, refreshToken);
-        }
+            Subject = new ClaimsIdentity(claims, "Bearer", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType),
+            Issuer = jwtSettings.Issuer,
+            Audience = jwtSettings.Audience,
+            IssuedAt = DateTime.UtcNow,
+            NotBefore = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.AddMinutes(jwtSettings.ExpirationMinutes),
+            SigningCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256)
+        };
 
-        return Result.Fail(FailureReasons.ClientError, result.GetErrors());
+        var token = new JsonWebTokenHandler().CreateToken(securityTokenDescriptor);
+        return new AuthResponse(token);
     }
 
     private async Task SendVerificationEmailAsync(ApplicationUser user)
     {
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-        var httpContext = httpContextAccessor.HttpContext!;
+        var httpContext = httpContextAccessor.HttpContext;
 
         var scheme = httpContext.Request.Scheme;
         var values = new RouteValueDictionary
@@ -219,41 +180,9 @@ public class IdentityService : IIdentityService
         };
 
         var confirmationLink = linkGenerator.GetUriByRouteValues(httpContext, "verifyemail", values, scheme);
-        var response = await fluentEmail.To(user.Email)
+        await fluentEmail.To(user.Email)
             .Subject("Confirm your email")
             .Body($"Please confirm your email by clicking this link: <a href='{confirmationLink}'>Confirm Email</a>", true)
             .SendAsync();
-    }
-
-    private Task<ClaimsPrincipal> ValidateAsync(string accessToken)
-    {
-        var parameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidateAudience = true,
-            ValidAudience = jwtSettings.Audience,
-            ValidateLifetime = false,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecurityKey)),
-            RequireExpirationTime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-
-        try
-        {
-            var user = tokenHandler.ValidateToken(accessToken, parameters, out var securityToken);
-            if (securityToken is JwtSecurityToken jwtSecurityToken && jwtSecurityToken.Header.Alg == SecurityAlgorithms.HmacSha256)
-            {
-                return Task.FromResult<ClaimsPrincipal>(user);
-            }
-        }
-        catch
-        {
-        }
-
-        return Task.FromResult<ClaimsPrincipal>(null);
     }
 }

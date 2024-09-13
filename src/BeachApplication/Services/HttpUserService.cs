@@ -1,5 +1,5 @@
-﻿using BeachApplication.Authentication.Extensions;
-using BeachApplication.Contracts;
+﻿using BeachApplication.Contracts;
+using BeachApplication.DataAccessLayer.Extensions;
 
 namespace BeachApplication.Services;
 

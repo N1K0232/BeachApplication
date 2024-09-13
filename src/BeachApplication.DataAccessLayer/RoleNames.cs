@@ -1,4 +1,4 @@
-﻿namespace BeachApplication.Authentication;
+﻿namespace BeachApplication.DataAccessLayer;
 
 public static class RoleNames
 {

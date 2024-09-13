@@ -1,13 +1,13 @@
 ﻿using System.Security.Claims;
 using System.Security.Principal;
 
-namespace BeachApplication.Authentication.Extensions;
+namespace BeachApplication.DataAccessLayer.Extensions;
 
 public static class ClaimsExtensions
 {
     public static Guid GetId(this IPrincipal user)
     {
-        var value = GetClaimValueInternal(user, ClaimTypes.NameIdentifier);
+        var value = user.GetClaimValueInternal(ClaimTypes.NameIdentifier);
         if (Guid.TryParse(value, out var userId))
         {
             return userId;
@@ -17,13 +17,13 @@ public static class ClaimsExtensions
     }
 
     public static string GetUserName(this IPrincipal user)
-        => GetClaimValueInternal(user, ClaimTypes.Name);
+        => user.GetClaimValueInternal(ClaimTypes.Name);
 
     public static string GetEmail(this IPrincipal user)
-        => GetClaimValueInternal(user, ClaimTypes.Email);
+        => user.GetClaimValueInternal(ClaimTypes.Email);
 
     public static string GetClaimValue(this IPrincipal user, string claimType)
-        => GetClaimValueInternal(user, claimType);
+        => user.GetClaimValueInternal(claimType);
 
     internal static string GetClaimValueInternal(this IPrincipal user, string claimType)
         => ((ClaimsPrincipal)user).FindFirstValue(claimType);

@@ -14,7 +14,11 @@ internal class SubscriptionConfiguration : DeletableEntityConfiguration<Subscrip
 
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(s => s.Notes).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
-        builder.Property(s => s.UserId).IsRequired();
+
+        builder.HasOne(s => s.User)
+            .WithMany(u => u.Subscriptions)
+            .HasForeignKey(s => s.UserId)
+            .IsRequired();
 
         builder.ToTable("Subscriptions");
         base.Configure(builder);

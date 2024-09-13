@@ -18,12 +18,6 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
             .WithName("login")
             .WithOpenApi();
 
-        authApiGroup.MapPost("refresh", RefreshTokenAsync)
-            .Produces<AuthResponse>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .WithName("refresh")
-            .WithOpenApi();
-
         authApiGroup.MapPost("register", RegisterAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
@@ -55,12 +49,6 @@ public class AuthEndpoint : IEndpointRouteHandlerBuilder
     private static async Task<IResult> LoginAsync(IIdentityService identityService, LoginRequest request, HttpContext httpContext)
     {
         var result = await identityService.LoginAsync(request);
-        return httpContext.CreateResponse(result);
-    }
-
-    private static async Task<IResult> RefreshTokenAsync(IIdentityService identityService, RefreshTokenRequest request, HttpContext httpContext)
-    {
-        var result = await identityService.RefreshTokenAsync(request);
         return httpContext.CreateResponse(result);
     }
 

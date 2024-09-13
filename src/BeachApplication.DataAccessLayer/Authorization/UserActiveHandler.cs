@@ -1,21 +1,13 @@
 ﻿using System.Security.Claims;
-using BeachApplication.Authentication.Entities;
-using BeachApplication.Authentication.Extensions;
-using BeachApplication.Authentication.Requirements;
+using BeachApplication.DataAccessLayer.Entities.Identity;
+using BeachApplication.DataAccessLayer.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 
-namespace BeachApplication.Authentication.Handlers;
+namespace BeachApplication.DataAccessLayer.Authorization;
 
-public class UserActiveHandler : AuthorizationHandler<UserActiveRequirement>
+public class UserActiveHandler(UserManager<ApplicationUser> userManager) : AuthorizationHandler<UserActiveRequirement>
 {
-    private readonly UserManager<ApplicationUser> userManager;
-
-    public UserActiveHandler(UserManager<ApplicationUser> userManager)
-    {
-        this.userManager = userManager;
-    }
-
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, UserActiveRequirement requirement)
     {
         var isAuthenticated = context.User.Identity?.IsAuthenticated ?? false;

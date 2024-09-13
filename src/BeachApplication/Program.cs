@@ -5,10 +5,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using BeachApplication.Authentication;
-using BeachApplication.Authentication.Entities;
-using BeachApplication.Authentication.Handlers;
-using BeachApplication.Authentication.Requirements;
 using BeachApplication.BusinessLayer.Clients;
 using BeachApplication.BusinessLayer.Clients.Interfaces;
 using BeachApplication.BusinessLayer.Clients.Refit;
@@ -23,10 +19,10 @@ using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.DataAccessLayer.Caching;
-using BeachApplication.DataAccessLayer.Settings;
-using BeachApplication.DataProtectionLayer;
-using BeachApplication.DataProtectionLayer.Services;
+using BeachApplication.DataAccessLayer.DataProtection;
+using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
@@ -83,9 +79,6 @@ var azureStorageConnectionString = builder.Configuration.GetConnectionString("Az
 var translatorSettingsSection = builder.Configuration.GetSection(nameof(TranslatorSettings));
 builder.Services.Configure<TranslatorSettings>(translatorSettingsSection);
 
-var dataContextSettingsSection = builder.Configuration.GetSection(nameof(DataContextSettings));
-var dataContextSettings = dataContextSettingsSection.Get<DataContextSettings>()!;
-
 var openWeatherMapSettingsSection = builder.Configuration.GetSection(nameof(OpenWeatherMapSettings));
 var openWeatherMapSettings = openWeatherMapSettingsSection.Get<OpenWeatherMapSettings>()!;
 
@@ -111,18 +104,22 @@ builder.Services.AddExceptionHandler<DbUpdateExceptionHandler>();
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql")
     .AddDbContextCheck<ApplicationDbContext>("database")
-    .AddDbContextCheck<AuthenticationDbContext>("identity")
-    .AddDbContextCheck<DataProtectionDbContext>("dataprotection");
+    .AddDbContextCheck<AuthenticationDbContext>("identity");
 
-builder.Services.AddDataProtection().PersistKeysToDbContext<DataProtectionDbContext>();
+builder.Services.AddDataProtection().SetApplicationName(appSettings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
 builder.Services.AddScoped<IDataProtectionService, DataProtectionService>();
+builder.Services.AddScoped<ITimeLimitedDataProtectionService, TimeLimitedDataProtectionService>();
 
 builder.Services.AddScoped(services =>
 {
-    var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
-    var protector = dataProtectionProvider.CreateProtector("beachapplication");
+    var dataProtectionProvider = services.GetDataProtectionProvider();
+    return dataProtectionProvider.CreateProtector(appSettings.ApplicationName);
+});
 
-    return protector;
+builder.Services.AddScoped(services =>
+{
+    var dataProtector = services.GetDataProtector(appSettings.ApplicationName);
+    return dataProtector.ToTimeLimitedDataProtector();
 });
 
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -149,10 +146,13 @@ builder.Services.AddProblemDetails(options =>
     options.CustomizeProblemDetails = context =>
     {
         var statusCode = context.ProblemDetails.Status.GetValueOrDefault(StatusCodes.Status500InternalServerError);
+        var httpContext = context.HttpContext;
+
         context.ProblemDetails.Type ??= $"https://httpstatuses.io/{statusCode}";
         context.ProblemDetails.Title ??= ReasonPhrases.GetReasonPhrase(statusCode);
-        context.ProblemDetails.Instance ??= context.HttpContext.Request.Path;
-        context.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+
+        context.ProblemDetails.Instance ??= httpContext.Request.Path;
+        context.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
     };
 });
 
@@ -275,45 +275,23 @@ builder.Services.AddRefitClient<IOpenWeatherMapClient>().ConfigureHttpClient(htt
 builder.Services.AddSingleton<ISqlClientCache, SqlClientCache>();
 builder.Services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
 
-builder.Services.AddSqlServer<ApplicationDbContext>(sqlConnectionString, options =>
-{
-    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-    options.CommandTimeout(dataContextSettings.CommandTimeout);
-    options.EnableRetryOnFailure(dataContextSettings.MaxRetryCount, dataContextSettings.MaxRetryDelay, null);
-});
-
+builder.Services.AddSqlServer<ApplicationDbContext>(sqlConnectionString);
 builder.Services.AddSqlContext(options =>
 {
     options.ConnectionString = sqlConnectionString;
-});
-
-builder.Services.AddSqlServer<DataProtectionDbContext>(sqlConnectionString, options =>
-{
-    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-    options.CommandTimeout(dataContextSettings.CommandTimeout);
-    options.EnableRetryOnFailure(dataContextSettings.MaxRetryCount, dataContextSettings.MaxRetryDelay, null);
-});
-
-builder.Services.AddSqlServer<AuthenticationDbContext>(sqlConnectionString, options =>
-{
-    options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-    options.CommandTimeout(dataContextSettings.CommandTimeout);
-    options.EnableRetryOnFailure(dataContextSettings.MaxRetryCount, dataContextSettings.MaxRetryDelay, null);
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.User.RequireUniqueEmail = true;
     options.SignIn.RequireConfirmedEmail = true;
-    options.Tokens.EmailConfirmationTokenProvider = "emailconfirmation";
     options.Password.RequiredLength = 8;
     options.Password.RequireDigit = true;
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
 })
-.AddEntityFrameworkStores<AuthenticationDbContext>()
-.AddTokenProvider<EmailTokenProvider<ApplicationUser>>("emailconfirmation")
+.AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
 builder.Services.AddAuthentication(options =>

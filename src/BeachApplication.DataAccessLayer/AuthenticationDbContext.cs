@@ -1,17 +1,14 @@
-﻿using BeachApplication.Authentication.Entities;
+﻿using BeachApplication.DataAccessLayer.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace BeachApplication.Authentication;
+namespace BeachApplication.DataAccessLayer;
 
-public class AuthenticationDbContext
-    : IdentityDbContext<ApplicationUser, ApplicationRole, Guid, IdentityUserClaim<Guid>, ApplicationUserRole, IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>
+public class AuthenticationDbContext(DbContextOptions options)
+        : IdentityDbContext<ApplicationUser, ApplicationRole, Guid, IdentityUserClaim<Guid>, ApplicationUserRole,
+        IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>(options)
 {
-    public AuthenticationDbContext(DbContextOptions options) : base(options)
-    {
-    }
-
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -20,9 +17,6 @@ public class AuthenticationDbContext
         {
             b.Property(user => user.FirstName).HasMaxLength(256).IsRequired();
             b.Property(user => user.LastName).HasMaxLength(256).IsRequired(false);
-
-            b.Property(user => user.RefreshToken).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
-            b.Property(user => user.RefreshTokenExpirationDate).IsRequired(false);
         });
 
         builder.Entity<ApplicationUserRole>(b =>

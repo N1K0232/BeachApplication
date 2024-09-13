@@ -1,15 +1,15 @@
 ﻿using System.Reflection;
-using BeachApplication.Authentication;
 using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using EntityFramework.Exceptions.SqlServer;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 
 namespace BeachApplication.DataAccessLayer;
 
-public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext
+public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext, IDataProtectionKeyContext
 {
     private static readonly MethodInfo setQueryFilterOnDeletableEntity = typeof(ApplicationDbContext)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
@@ -26,6 +26,8 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         this.cache = cache;
         this.logger = logger;
     }
+
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
     public Task DeleteAsync<T>(T entity) where T : BaseEntity
     {

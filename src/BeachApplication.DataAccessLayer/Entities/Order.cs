@@ -1,5 +1,5 @@
-﻿using BeachApplication.Authentication.Entities;
-using BeachApplication.DataAccessLayer.Entities.Common;
+﻿using BeachApplication.DataAccessLayer.Entities.Common;
+using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.Shared.Enums;
 
 namespace BeachApplication.DataAccessLayer.Entities;

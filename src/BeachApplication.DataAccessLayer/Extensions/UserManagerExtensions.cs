@@ -1,7 +1,7 @@
-﻿using BeachApplication.Authentication.Entities;
+﻿using BeachApplication.DataAccessLayer.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 
-namespace BeachApplication.Authentication.Extensions;
+namespace BeachApplication.DataAccessLayer.Extensions;
 
 public static class UserManagerExtensions
 {

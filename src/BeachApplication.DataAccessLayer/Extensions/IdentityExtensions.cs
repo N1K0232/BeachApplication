@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace BeachApplication.Authentication.Extensions;
+namespace BeachApplication.DataAccessLayer.Extensions;
 
 public static class IdentityExtensions
 {
