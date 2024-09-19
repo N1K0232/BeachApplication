@@ -17,4 +17,6 @@ public interface IApplicationDbContext
     Task SaveAsync();
 
     Task ExecuteTransactionAsync(Func<Task> action);
+
+    Task EnsureCreatedAsync();
 }

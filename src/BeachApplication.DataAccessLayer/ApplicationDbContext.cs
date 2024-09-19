@@ -5,11 +5,13 @@ using EntityFramework.Exceptions.SqlServer;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace BeachApplication.DataAccessLayer;
 
-public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext, IDataProtectionKeyContext
+public partial class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext, IDataProtectionKeyContext
 {
     private static readonly MethodInfo setQueryFilterOnDeletableEntity = typeof(ApplicationDbContext)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
@@ -31,24 +33,31 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
+        ThrowIfDisposed();
+
         Set<T>().Remove(entity);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
     {
+        ThrowIfDisposed();
+
         Set<T>().RemoveRange(entities);
         return Task.CompletedTask;
     }
 
     public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
+        ThrowIfDisposed();
+
         var entity = await Set<T>().FindAsync([id], tokenSource.Token);
         return entity;
     }
 
     public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity
     {
+        ThrowIfDisposed();
         var set = GenerateQuery<T>(sql, parameters);
 
         if (ignoreQueryFilters)
@@ -61,12 +70,15 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task InsertAsync<T>(T entity) where T : BaseEntity
     {
+        ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(entity, nameof(entity));
+
         await Set<T>().AddAsync(entity, tokenSource.Token);
     }
 
     public async Task SaveAsync()
     {
+        ThrowIfDisposed();
         var entries = GetEntries(typeof(BaseEntity));
 
         foreach (var entry in entries)
@@ -101,21 +113,34 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public async Task ExecuteTransactionAsync(Func<Task> action)
     {
+        ThrowIfDisposed();
+
         var strategy = Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
+        await ExecuteTransactionInternalAsync(strategy, action, true);
+    }
+
+    public async Task EnsureCreatedAsync()
+    {
+        ThrowIfDisposed();
+
+        var strategy = Database.CreateExecutionStrategy();
+        var creator = GetDatabaseCreator();
+
+        await ExecuteTransactionInternalAsync(strategy, async () =>
         {
-            using var transaction = await Database.BeginTransactionAsync(tokenSource.Token);
-            await action.Invoke();
-            await transaction.CommitAsync(tokenSource.Token);
+            var exists = await creator.ExistsAsync(tokenSource.Token);
+            if (!exists)
+            {
+                await creator.CreateAsync(tokenSource.Token);
+            }
         });
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        tokenSource.Dispose();
-        tokenSource = null!;
+        await DisposeAsync(true);
+        await base.DisposeAsync();
 
-        base.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -127,6 +152,16 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        builder.Entity<DataProtectionKey>(b =>
+        {
+            b.ToTable("DataProtectionKeys");
+            b.HasKey(k => k.Id);
+            b.Property(k => k.Id).UseIdentityColumn(1, 1);
+
+            b.Property(k => k.FriendlyName).HasMaxLength(256).IsRequired(false);
+            b.Property(k => k.Xml).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
+        });
+
         OnModelCreatingInternal(builder);
         base.OnModelCreating(builder);
     }
@@ -142,6 +177,45 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
         return methods;
     }
+
+    private IRelationalDatabaseCreator GetDatabaseCreator()
+        => this.GetService<IRelationalDatabaseCreator>();
+
+    private async Task ExecuteTransactionInternalAsync(IExecutionStrategy strategy, Func<Task> action, bool createTransaction = false)
+    {
+        await strategy.ExecuteAsync(async () =>
+        {
+            using var transaction = await CreateTransactionAsync(createTransaction, tokenSource.Token);
+            await action.Invoke();
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(tokenSource.Token);
+                await transaction.DisposeAsync();
+            }
+        });
+    }
+
+    private async Task<IDbContextTransaction> CreateTransactionAsync(bool createTransaction, CancellationToken cancellationToken)
+        => createTransaction ? await Database.BeginTransactionAsync(cancellationToken) : null;
+
+    private async ValueTask DisposeAsync(bool disposing)
+    {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                tokenSource.Dispose();
+                tokenSource = null;
+
+                await DisposeConnectionAsync();
+            }
+
+            disposed = true;
+        }
+    }
+
+    private void ThrowIfDisposed()
+        => ObjectDisposedException.ThrowIf(disposed, GetType().FullName);
 
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {

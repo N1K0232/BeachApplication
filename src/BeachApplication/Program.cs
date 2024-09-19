@@ -20,9 +20,9 @@ using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Authorization;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.DataAccessLayer.DataProtection;
 using BeachApplication.DataAccessLayer.Entities.Identity;
+using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Extensions;
 using BeachApplication.Handlers.Exceptions;
 using BeachApplication.Handlers.Http;
@@ -73,7 +73,7 @@ var jwtSettings = builder.Services.ConfigureAndGet<JwtSettings>(builder.Configur
 var emailSettings = builder.Services.ConfigureAndGet<SendinblueSettings>(builder.Configuration, nameof(SendinblueSettings))!;
 var swaggerSettings = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings))!;
 
-var sqlConnectionString = builder.Configuration.GetConnectionString("SqlConnection");
+var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
 var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
 
 var translatorSettingsSection = builder.Configuration.GetSection(nameof(TranslatorSettings));
@@ -87,15 +87,7 @@ builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Envi
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRouting();
-
 builder.Services.AddMemoryCache();
-builder.Services.AddDistributedSqlServerCache(options =>
-{
-    options.ConnectionString = sqlConnectionString;
-    options.TableName = "CacheStore";
-    options.SchemaName = "dbo";
-    options.DefaultSlidingExpiration = TimeSpan.FromDays(1);
-});
 
 builder.Services.AddExceptionHandler<DefaultExceptionHandler>();
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
@@ -222,7 +214,7 @@ builder.Services.AddResiliencePipeline("timeout", (builder, context) =>
             var logger = context.ServiceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogInformation("Timeout occurred after: {TotalSeconds} seconds", args.Timeout.TotalSeconds);
 
-            return default;
+            return ValueTask.CompletedTask;
         }
     });
 });
@@ -272,14 +264,8 @@ builder.Services.AddRefitClient<IOpenWeatherMapClient>().ConfigureHttpClient(htt
     return handler;
 });
 
-builder.Services.AddSingleton<ISqlClientCache, SqlClientCache>();
-builder.Services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
-
-builder.Services.AddSqlServer<ApplicationDbContext>(sqlConnectionString);
-builder.Services.AddSqlContext(options =>
-{
-    options.ConnectionString = sqlConnectionString;
-});
+builder.Services.AddSqlServerCaching(connectionString);
+builder.Services.AddSqlServerContext(connectionString);
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
@@ -345,7 +331,7 @@ builder.Services.AddHangfire(options =>
     options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(sqlConnectionString, new SqlServerStorageOptions
+        .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
         {
             CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
             SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
@@ -381,6 +367,7 @@ builder.Services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 
+builder.Services.AddHostedService<DatabaseService>();
 builder.Services.AddHostedService<IdentityRoleService>();
 builder.Services.AddHostedService<IdentityUserService>();
 
