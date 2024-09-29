@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Mime;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using BeachApplication.BusinessLayer.Clients;
 using BeachApplication.BusinessLayer.Clients.Interfaces;
 using BeachApplication.BusinessLayer.Clients.Refit;
+using BeachApplication.BusinessLayer.Core;
 using BeachApplication.BusinessLayer.Diagnostics.BackgroundJobs;
 using BeachApplication.BusinessLayer.Diagnostics.HealthChecks;
 using BeachApplication.BusinessLayer.Mapping;
@@ -34,7 +34,6 @@ using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -43,7 +42,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using MinimalHelpers.Routing;
@@ -51,10 +49,12 @@ using OperationResults.AspNetCore.Http;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
+using QRCoder;
 using Quartz;
 using Quartz.AspNetCore;
 using Refit;
 using Serilog;
+using SimpleAuthentication;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
 using TinyHelpers.Extensions;
@@ -67,11 +67,9 @@ builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
     loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
 });
 
-var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings))!;
-var jwtSettings = builder.Services.ConfigureAndGet<JwtSettings>(builder.Configuration, nameof(JwtSettings))!;
-
-var emailSettings = builder.Services.ConfigureAndGet<SendinblueSettings>(builder.Configuration, nameof(SendinblueSettings))!;
-var swaggerSettings = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings))!;
+var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
+var emailSettings = builder.Services.ConfigureAndGet<SendinblueSettings>(builder.Configuration, nameof(SendinblueSettings));
+var swaggerSettings = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
 
 var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
 var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
@@ -87,7 +85,9 @@ builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Envi
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRouting();
+
 builder.Services.AddMemoryCache();
+builder.Services.AddSimpleAuthentication(builder.Configuration);
 
 builder.Services.AddExceptionHandler<DefaultExceptionHandler>();
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
@@ -172,37 +172,18 @@ if (swaggerSettings.Enabled)
             Version = swaggerSettings.Version
         });
 
-        options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
-        {
-            In = ParameterLocation.Header,
-            Description = "Insert JWT token with the \"Bearer \" prefix",
-            Name = HeaderNames.Authorization,
-            Type = SecuritySchemeType.ApiKey
-        });
-
-        options.AddSecurityRequirement(new OpenApiSecurityRequirement
-        {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = JwtBearerDefaults.AuthenticationScheme
-                    }
-                },
-                Array.Empty<string>()
-            }
-        });
-
         options.AddDefaultResponse();
         options.AddAcceptLanguageHeader();
+        options.AddSimpleAuthentication(builder.Configuration);
     })
     .AddFluentValidationRulesToSwagger(options =>
     {
         options.SetNotNullableIfMinLengthGreaterThenZero = true;
     });
 }
+
+builder.Services.AddScoped(_ => new QRCodeGenerator());
+builder.Services.AddScoped<IQrCodeGeneratorService, QrCodeGeneratorService>();
 
 builder.Services.AddResiliencePipeline("timeout", (builder, context) =>
 {
@@ -279,27 +260,6 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecurityKey)),
-        ValidateIssuer = true,
-        ValidIssuer = jwtSettings.Issuer,
-        ValidateAudience = true,
-        ValidAudience = jwtSettings.Audience,
-        ValidateLifetime = true,
-        RequireExpirationTime = true,
-        ClockSkew = TimeSpan.Zero
-    };
-});
 
 builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
 builder.Services.AddScoped<IUserService, HttpUserService>();

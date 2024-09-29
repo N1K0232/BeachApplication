@@ -1,24 +1,24 @@
-﻿using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.Contracts;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+﻿using System.Security.Claims;
+using BeachApplication.BusinessLayer.Services.Interfaces;
+using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Shared.Models;
-using Microsoft.AspNetCore.Identity;
 using OperationResults;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class MeService(UserManager<ApplicationUser> userManager, IUserService userService) : IMeService
+public class MeService : IMeService
 {
-    public async Task<Result<User>> GetAsync()
+    public Task<Result<User>> GetAsync(ClaimsPrincipal principal)
     {
-        var userName = await userService.GetUserNameAsync();
-        var user = await userManager.FindByNameAsync(userName);
-
-        if (user is null)
+        var user = new User
         {
-            return Result.Fail(FailureReasons.ItemNotFound, "No user found");
-        }
+            Id = principal.GetId(),
+            FirstName = principal.GetClaimValue(ClaimTypes.GivenName),
+            LastName = principal.GetClaimValue(ClaimTypes.Surname),
+            Email = principal.GetEmail()
+        };
 
-        return new User(user.Id, user.FirstName, user.LastName, user.Email);
+        var result = Result<User>.Ok(user);
+        return Task.FromResult(result);
     }
 }

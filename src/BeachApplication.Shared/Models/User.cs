@@ -1,3 +1,12 @@
-﻿namespace BeachApplication.Shared.Models;
+﻿using BeachApplication.Shared.Models.Common;
 
-public record class User(Guid Id, string FirstName, string? LastName, string Email);
+namespace BeachApplication.Shared.Models;
+
+public class User : BaseObject
+{
+    public string FirstName { get; init; } = string.Empty;
+
+    public string? LastName { get; init; }
+
+    public string Email { get; init; } = string.Empty;
+}

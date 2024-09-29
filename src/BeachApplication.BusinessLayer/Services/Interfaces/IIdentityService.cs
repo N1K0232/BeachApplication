@@ -6,6 +6,8 @@ namespace BeachApplication.BusinessLayer.Services.Interfaces;
 
 public interface IIdentityService
 {
+    Task<Result<ByteArrayFileContent>> GetQrCodeAsync(string token);
+
     Task<Result<AuthResponse>> LoginAsync(LoginRequest request);
 
     Task<Result> RegisterAsync(RegisterRequest request);
@@ -13,6 +15,8 @@ public interface IIdentityService
     Task<Result<ResetPasswordResponse>> ResetPasswordAsync(ResetPasswordRequest request);
 
     Task<Result> UpdatePasswordAsync(ChangePasswordRequest request);
+
+    Task<Result<AuthResponse>> ValidateTwoFactorAsync(TwoFactorRequest request);
 
     Task<Result> VerifyEmailAsync(Guid userId, string token);
 }

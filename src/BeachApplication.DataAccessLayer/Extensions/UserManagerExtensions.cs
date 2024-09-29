@@ -15,4 +15,10 @@ public static class UserManagerExtensions
         var user = await userManager.FindByNameAsync(userName);
         return user is not null;
     }
+
+    public static async Task<bool> AuthenticatorKeyExistsAsync(this UserManager<ApplicationUser> userManager, ApplicationUser user)
+    {
+        var secret = await userManager.GetAuthenticatorKeyAsync(user);
+        return !string.IsNullOrWhiteSpace(secret);
+    }
 }
