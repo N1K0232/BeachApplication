@@ -1,4 +1,6 @@
-﻿using BeachApplication.BusinessLayer.Services.Interfaces;
+﻿using System.Security.Claims;
+using BeachApplication.BusinessLayer.Services.Interfaces;
+using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
@@ -14,7 +16,7 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
     {
         var identityApiGroup = endpoints.MapGroup("/api/auth");
 
-        identityApiGroup.MapGet("/me", GetMeAsync)
+        identityApiGroup.MapGet("/me", GetMe)
             .Produces<User>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -74,10 +76,17 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
     }
 
-    private static async Task<IResult> GetMeAsync(IMeService meService, HttpContext httpContext)
+    private static Results<Ok<User>, UnauthorizedHttpResult, ForbidHttpResult> GetMe(ClaimsPrincipal principal)
     {
-        var result = await meService.GetAsync(httpContext.User);
-        return httpContext.CreateResponse(result);
+        var user = new User
+        {
+            Id = principal.GetId(),
+            FirstName = principal.GetClaimValue(ClaimTypes.GivenName),
+            LastName = principal.GetClaimValue(ClaimTypes.Surname),
+            Email = principal.GetEmail()
+        };
+
+        return TypedResults.Ok(user);
     }
 
     private static async Task<IResult> GetQrCodeAsync(IIdentityService identityService, string token, HttpContext httpContext)
