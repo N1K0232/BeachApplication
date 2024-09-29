@@ -6,7 +6,7 @@ using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
 
-public class WeatherForecastEndpoint : IEndpointRouteHandlerBuilder
+public class WeatherForecastEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {

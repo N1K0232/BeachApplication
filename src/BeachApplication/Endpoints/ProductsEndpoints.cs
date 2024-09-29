@@ -8,7 +8,7 @@ using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
 
-public class ProductsEndpoint : IEndpointRouteHandlerBuilder
+public class ProductsEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {

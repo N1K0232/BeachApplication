@@ -6,7 +6,7 @@ using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
 
-public class PostsEndpoint : IEndpointRouteHandlerBuilder
+public class PostsEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {

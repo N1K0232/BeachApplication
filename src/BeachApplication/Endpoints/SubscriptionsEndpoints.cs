@@ -7,7 +7,7 @@ using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
 
-public class SubscriptionsEndpoint : IEndpointRouteHandlerBuilder
+public class SubscriptionsEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
