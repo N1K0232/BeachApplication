@@ -21,8 +21,6 @@ public class ProductService(IApplicationDbContext db, IMapper mapper) : IProduct
         if (product is not null)
         {
             await db.DeleteAsync(product);
-            await db.SaveAsync();
-
             return Result.Ok();
         }
 
@@ -85,7 +83,6 @@ public class ProductService(IApplicationDbContext db, IMapper mapper) : IProduct
         var product = mapper.Map<Entities.Product>(request);
         await db.InsertAsync(product);
 
-        await db.SaveAsync();
         return mapper.Map<Product>(product);
     }
 
@@ -97,7 +94,7 @@ public class ProductService(IApplicationDbContext db, IMapper mapper) : IProduct
         if (product is not null)
         {
             mapper.Map(request, product);
-            await db.SaveAsync();
+            await db.UpdateAsync(product);
 
             return mapper.Map<Product>(product);
         }

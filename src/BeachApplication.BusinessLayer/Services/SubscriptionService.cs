@@ -23,8 +23,6 @@ public class SubscriptionService(IApplicationDbContext db, IUserService userServ
         if (subscription is not null)
         {
             await db.DeleteAsync(subscription);
-            await db.SaveAsync();
-
             return Result.Ok();
         }
 
@@ -64,8 +62,6 @@ public class SubscriptionService(IApplicationDbContext db, IUserService userServ
         subscription.UserId = await userService.GetIdAsync();
 
         await db.InsertAsync(subscription);
-        await db.SaveAsync();
-
         return mapper.Map<Subscription>(subscription);
     }
 
@@ -77,7 +73,7 @@ public class SubscriptionService(IApplicationDbContext db, IUserService userServ
         if (subscription is not null)
         {
             mapper.Map(request, subscription);
-            await db.SaveAsync();
+            await db.UpdateAsync(subscription);
 
             return mapper.Map<Subscription>(subscription);
         }

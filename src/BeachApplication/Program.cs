@@ -313,32 +313,38 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("Administrator", policy =>
     {
-        policy.RequireAuthenticatedUser();
-        policy.RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+        policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator);
+        policy.Requirements.Add(new UserActiveRequirement());
+    });
+
+    options.AddPolicy("PowerUser", policy =>
+    {
+        policy.RequireAuthenticatedUser().RequireRole(RoleNames.PowerUser);
         policy.Requirements.Add(new UserActiveRequirement());
     });
 
     options.AddPolicy("UserActive", policy =>
     {
-        policy.RequireAuthenticatedUser();
-        policy.RequireRole(RoleNames.User);
+        policy.RequireAuthenticatedUser().RequireRole(RoleNames.User);
         policy.Requirements.Add(new UserActiveRequirement());
     });
 });
 
 builder.Services.AddHangfire(options =>
 {
+    var storageOptions = new SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        QueuePollInterval = TimeSpan.Zero,
+        UseRecommendedIsolationLevel = true,
+        DisableGlobalLocks = true
+    };
+
     options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
-        {
-            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-            QueuePollInterval = TimeSpan.Zero,
-            UseRecommendedIsolationLevel = true,
-            DisableGlobalLocks = true
-        });
+        .UseSqlServerStorage(connectionString, storageOptions);
 });
 
 builder.Services.AddHangfireServer();

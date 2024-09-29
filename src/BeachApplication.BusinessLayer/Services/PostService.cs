@@ -18,8 +18,6 @@ public class PostService(IApplicationDbContext db, IMapper mapper) : IPostServic
         if (post is not null)
         {
             await db.DeleteAsync(post);
-            await db.SaveAsync();
-
             return Result.Ok();
         }
 
@@ -52,7 +50,6 @@ public class PostService(IApplicationDbContext db, IMapper mapper) : IPostServic
         var post = mapper.Map<Entities.Post>(request);
         await db.InsertAsync(post);
 
-        await db.SaveAsync();
         return mapper.Map<Post>(post);
     }
 
@@ -62,7 +59,7 @@ public class PostService(IApplicationDbContext db, IMapper mapper) : IPostServic
         if (post is not null)
         {
             mapper.Map(request, post);
-            await db.SaveAsync();
+            await db.UpdateAsync(post);
 
             return mapper.Map<Post>(post);
         }

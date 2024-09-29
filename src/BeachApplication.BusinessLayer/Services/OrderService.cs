@@ -37,7 +37,6 @@ public class OrderService(IApplicationDbContext db, IUserService userService, IM
             orderDetail.Price = Convert.ToDecimal(dbProduct.Price * request.Quantity);
 
             await db.InsertAsync(orderDetail);
-            await db.SaveAsync();
         });
 
         var order = mapper.Map<Order>(dbOrder);
@@ -58,8 +57,6 @@ public class OrderService(IApplicationDbContext db, IUserService userService, IM
         };
 
         await db.InsertAsync(dbOrder);
-        await db.SaveAsync();
-
         return mapper.Map<Order>(dbOrder);
     }
 
@@ -79,7 +76,6 @@ public class OrderService(IApplicationDbContext db, IUserService userService, IM
             order.Status = OrderStatus.Canceled;
             await db.DeleteAsync(order);
 
-            await db.SaveAsync();
             return Result.Ok();
         }
 

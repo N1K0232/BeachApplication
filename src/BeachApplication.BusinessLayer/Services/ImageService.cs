@@ -23,7 +23,6 @@ public class ImageService(IApplicationDbContext db, IStorageProvider storageProv
             await db.DeleteAsync(image);
             await storageProvider.DeleteAsync(image.Path);
 
-            await db.SaveAsync();
             return Result.Ok();
         }
 
@@ -79,8 +78,6 @@ public class ImageService(IApplicationDbContext db, IStorageProvider storageProv
         };
 
         await db.InsertAsync(image);
-        await db.SaveAsync();
-
         return mapper.Map<Image>(image);
     }
 }

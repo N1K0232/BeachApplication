@@ -20,7 +20,7 @@ public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICatego
         if (category is not null)
         {
             await db.DeleteAsync(category);
-            await db.SaveAsync();
+            return Result.Ok();
         }
 
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
@@ -67,7 +67,6 @@ public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICatego
         var category = mapper.Map<Entities.Category>(request);
         await db.InsertAsync(category);
 
-        await db.SaveAsync();
         return mapper.Map<Category>(category);
     }
 
@@ -79,7 +78,7 @@ public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICatego
         if (category is not null)
         {
             mapper.Map(request, category);
-            await db.SaveAsync();
+            await db.UpdateAsync(category);
 
             return mapper.Map<Category>(category);
         }
