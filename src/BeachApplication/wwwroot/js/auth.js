@@ -3,9 +3,7 @@
         id: '',
         firstName: '',
         lastName: '',
-        fullName: '',
         email: '',
-        userName: '',
         password: '',
         confirmPassword: '',
         isBusy: false,
@@ -16,9 +14,7 @@
             this.id = '';
             this.firstName = '';
             this.lastName = '';
-            this.fullName = '';
             this.email = '';
-            this.userName = '';
             this.password = '';
             this.confirmPassword = '';
             this.isBusy = false;
@@ -36,7 +32,7 @@
 
             try {
                 var request = {
-                    userName: this.userName,
+                    email: this.email,
                     password: this.password,
                     isPersistent: this.isPersistent
                 };
@@ -238,7 +234,7 @@
         },
 
         invalidLoginForm: function () {
-            return this.userName.trim().length === 0 && this.password.trim().length === 0;
+            return this.email.trim().length === 0 && this.password.trim().length === 0;
         },
 
         invalidRegisterForm: function () {
