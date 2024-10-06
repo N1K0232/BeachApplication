@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
@@ -24,8 +23,7 @@ using BeachApplication.DataAccessLayer.DataProtection;
 using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Extensions;
-using BeachApplication.Handlers.Exceptions;
-using BeachApplication.Handlers.Http;
+using BeachApplication.Handlers;
 using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
@@ -39,12 +37,12 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using MinimalHelpers.Routing;
+using MinimalHelpers.Validation;
 using OperationResults.AspNetCore.Http;
 using Polly;
 using Polly.Retry;
@@ -59,9 +57,12 @@ using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
 using TinyHelpers.Extensions;
 using TinyHelpers.Json.Serialization;
+using ResultErrorResponseFormat = OperationResults.AspNetCore.Http.ErrorResponseFormat;
+using ValidationErrorResponseFormat = MinimalHelpers.Validation.ErrorResponseFormat;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.local.json", true, true);
+
 builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
 {
     loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
@@ -78,20 +79,19 @@ var translatorSettingsSection = builder.Configuration.GetSection(nameof(Translat
 builder.Services.Configure<TranslatorSettings>(translatorSettingsSection);
 
 var openWeatherMapSettingsSection = builder.Configuration.GetSection(nameof(OpenWeatherMapSettings));
-var openWeatherMapSettings = openWeatherMapSettingsSection.Get<OpenWeatherMapSettings>()!;
+var openWeatherMapSettings = openWeatherMapSettingsSection.Get<OpenWeatherMapSettings>();
 
 builder.Services.AddRequestLocalization(appSettings.SupportedCultures);
 builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
+
+builder.Services.AddDefaultExceptionHandler();
+builder.Services.AddDefaultProblemDetails();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRouting();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSimpleAuthentication(builder.Configuration);
-
-builder.Services.AddExceptionHandler<DefaultExceptionHandler>();
-builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
-builder.Services.AddExceptionHandler<DbUpdateExceptionHandler>();
 
 builder.Services.AddRazorPages();
 builder.Services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql")
@@ -133,21 +133,6 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-builder.Services.AddProblemDetails(options =>
-{
-    options.CustomizeProblemDetails = context =>
-    {
-        var statusCode = context.ProblemDetails.Status.GetValueOrDefault(StatusCodes.Status500InternalServerError);
-        var httpContext = context.HttpContext;
-
-        context.ProblemDetails.Type ??= $"https://httpstatuses.io/{statusCode}";
-        context.ProblemDetails.Title ??= ReasonPhrases.GetReasonPhrase(statusCode);
-
-        context.ProblemDetails.Instance ??= httpContext.Request.Path;
-        context.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
-    };
-});
-
 builder.Services.AddAutoMapper(typeof(ImageMapperProfile).Assembly);
 builder.Services.AddValidatorsFromAssemblyContaining<SaveCategoryRequestValidator>();
 
@@ -158,7 +143,12 @@ builder.Services.AddFluentValidationAutoValidation(options =>
 
 builder.Services.AddOperationResult(options =>
 {
-    options.ErrorResponseFormat = ErrorResponseFormat.List;
+    options.ErrorResponseFormat = ResultErrorResponseFormat.List;
+});
+
+builder.Services.ConfigureValidation(options =>
+{
+    options.ErrorResponseFormat = ValidationErrorResponseFormat.List;
 });
 
 if (swaggerSettings.Enabled)
@@ -210,12 +200,21 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
         .HandleResult(r => r.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or >= HttpStatusCode.InternalServerError),
         DelayGenerator = args =>
         {
-            if (args.Outcome.Result is not null && args.Outcome.Result.Headers.TryGetValues(HeaderNames.RetryAfter, out var value))
+            var result = args.Outcome.Result;
+            var retryAfter = HeaderNames.RetryAfter;
+            double seconds;
+
+            if (result is not null && result.Headers.TryGetValues(retryAfter, out var value))
             {
-                return new ValueTask<TimeSpan?>(TimeSpan.FromSeconds(int.Parse(value.First())));
+                seconds = double.Parse(value.First());
+            }
+            else
+            {
+                seconds = Math.Pow(2, args.AttemptNumber + 1);
             }
 
-            return new ValueTask<TimeSpan?>(TimeSpan.FromSeconds(Math.Pow(2, args.AttemptNumber + 1)));
+            var delay = TimeSpan.FromSeconds(seconds);
+            return new ValueTask<TimeSpan?>(delay);
         },
         OnRetry = args =>
         {
@@ -328,8 +327,8 @@ else
 builder.Services.AddHttpClient<IAzureTokenProvider, AzureTokenProvider>();
 builder.Services.AddHttpClient<ITranslatorClient, TranslatorClient>();
 
-builder.Services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
-    .AddClasses(classes => classes.InNamespaceOf<IdentityService>())
+builder.Services.Scan(scan => scan.FromAssemblyOf<OrderService>()
+    .AddClasses(classes => classes.InNamespaceOf<OrderService>())
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 
