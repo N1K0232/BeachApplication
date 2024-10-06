@@ -1,7 +1,7 @@
 ﻿using BeachApplication.BusinessLayer.Services;
-using BeachApplication.Extensions;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
+using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
 using OperationResults;
 using OperationResults.AspNetCore.Http;
@@ -41,7 +41,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
 
         productsApiGroup.MapPost(string.Empty, InsertAsync)
             .RequireAuthorization("Administrator")
-            .WithValidator<SaveProductRequest>()
+            .WithValidation<SaveProductRequest>()
             .Produces<Product>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -52,7 +52,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
 
         productsApiGroup.MapPut("{id:guid}", UpdateAsync)
             .RequireAuthorization("Administrator")
-            .WithValidator<SaveProductRequest>()
+            .WithValidation<SaveProductRequest>()
             .Produces<Product>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

@@ -1,7 +1,7 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.Extensions;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
+using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
 using OperationResults.AspNetCore.Http;
 
@@ -41,7 +41,7 @@ public class CategoriesEndpoints : IEndpointRouteHandlerBuilder
 
         categoriesApiGroup.MapPost(string.Empty, InsertAsync)
             .RequireAuthorization("Administrator")
-            .WithValidator<SaveCategoryRequest>()
+            .WithValidation<SaveCategoryRequest>()
             .Produces<Category>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -52,7 +52,7 @@ public class CategoriesEndpoints : IEndpointRouteHandlerBuilder
 
         categoriesApiGroup.MapPut("{id:guid}", UpdateAsync)
             .RequireAuthorization("Administrator")
-            .WithValidator<SaveCategoryRequest>()
+            .WithValidation<SaveCategoryRequest>()
             .Produces<Category>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

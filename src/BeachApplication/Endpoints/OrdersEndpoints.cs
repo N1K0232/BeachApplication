@@ -1,7 +1,7 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.Extensions;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
+using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
 using OperationResults;
 using OperationResults.AspNetCore.Http;
@@ -16,7 +16,7 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
 
         orderApiGroup.MapPost("details", AddOrderDetailAsync)
             .RequireAuthorization("UserActive")
-            .WithValidator<SaveOrderRequest>()
+            .WithValidation<SaveOrderRequest>()
             .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
