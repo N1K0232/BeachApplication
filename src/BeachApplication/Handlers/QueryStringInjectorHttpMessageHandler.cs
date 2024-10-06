@@ -1,6 +1,6 @@
 ﻿using System.Web;
 
-namespace BeachApplication.Handlers.Http;
+namespace BeachApplication.Handlers;
 
 public class QueryStringInjectorHttpMessageHandler(IDictionary<string, string> parameters = null) : DelegatingHandler
 {

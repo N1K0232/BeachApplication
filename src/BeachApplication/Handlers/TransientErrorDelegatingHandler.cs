@@ -1,6 +1,6 @@
 ﻿using Polly.Registry;
 
-namespace BeachApplication.Handlers.Http;
+namespace BeachApplication.Handlers;
 
 public class TransientErrorDelegatingHandler(ResiliencePipelineProvider<string> provider) : DelegatingHandler
 {
