@@ -1,3 +1,3 @@
 ﻿namespace BeachApplication.Shared.Models.Requests;
 
-public record class LoginRequest(string UserName, string Password, bool IsPersistent);
+public record class LoginRequest(string Email, string Password, bool IsPersistent);
