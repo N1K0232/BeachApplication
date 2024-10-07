@@ -1,98 +1,48 @@
 ﻿using System.Reflection;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using EntityFramework.Exceptions.SqlServer;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Logging;
 
 namespace BeachApplication.DataAccessLayer;
 
-public partial class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext, IDataProtectionKeyContext
+public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext, IDataProtectionKeyContext
 {
     private static readonly MethodInfo setQueryFilterOnDeletableEntity = typeof(ApplicationDbContext)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(t => t.IsGenericMethod && t.Name == nameof(SetQueryFilterOnDeletableEntity));
 
-    private readonly ISqlClientCache cache;
-    private readonly ILogger<ApplicationDbContext> logger;
-
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
     private IDbContextTransaction transaction;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
-        ISqlClientCache cache,
-        ILogger<ApplicationDbContext> logger) : base(options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
-        this.cache = cache;
-        this.logger = logger;
     }
 
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
-    public async Task DeleteAsync<T>(T entity) where T : BaseEntity
+    public Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
-        ThrowIfDisposed();
-
-        if (entity is DeletableEntity deletableEntity)
-        {
-            deletableEntity.IsDeleted = true;
-            deletableEntity.DeletedAt = DateTime.UtcNow;
-
-            Set<T>().Update(entity);
-        }
-        else
-        {
-            Set<T>().Remove(entity);
-        }
-
-        await SaveChangesAsync(true, tokenSource.Token);
-        await cache.RemoveAsync(entity.Id, tokenSource.Token);
+        Set<T>().Remove(entity);
+        return Task.CompletedTask;
     }
 
-    public async Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
+    public Task DeleteAsync<T>(IEnumerable<T> entities) where T : BaseEntity
     {
-        ThrowIfDisposed();
-
-        foreach (var entity in entities)
-        {
-            if (entity is DeletableEntity deletableEntity)
-            {
-                deletableEntity.IsDeleted = true;
-                deletableEntity.DeletedAt = DateTime.UtcNow;
-
-                Set<T>().Update(entity);
-            }
-            else
-            {
-                Set<T>().Remove(entity);
-            }
-
-            await cache.RemoveAsync(entity.Id, tokenSource.Token);
-        }
-
-        await SaveChangesAsync(true, tokenSource.Token);
+        Set<T>().RemoveRange(entities);
+        return Task.CompletedTask;
     }
 
-    public async Task<T> GetAsync<T>(Guid id) where T : BaseEntity
+    public async ValueTask<T> GetAsync<T>(Guid id) where T : BaseEntity
     {
-        ThrowIfDisposed();
-
-        var cachedEntity = await cache.GetAsync<T>(id, tokenSource.Token);
-        if (cachedEntity is not null)
-        {
-            return cachedEntity;
-        }
-
         var entity = await Set<T>().FindAsync([id], tokenSource.Token);
         return entity;
     }
 
     public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity
     {
-        ThrowIfDisposed();
         var set = GenerateQuery<T>(sql, parameters);
 
         if (ignoreQueryFilters)
@@ -105,26 +55,47 @@ public partial class ApplicationDbContext : AuthenticationDbContext, IApplicatio
 
     public async Task InsertAsync<T>(T entity) where T : BaseEntity
     {
-        ThrowIfDisposed();
-
+        ArgumentNullException.ThrowIfNull(entity, nameof(entity));
         await Set<T>().AddAsync(entity, tokenSource.Token);
-        await SaveChangesAsync(true, tokenSource.Token);
-        await cache.SetAsync(entity, TimeSpan.FromHours(1), tokenSource.Token);
     }
 
-    public async Task UpdateAsync<T>(T entity) where T : BaseEntity
+    public async Task SaveAsync()
     {
-        ThrowIfDisposed();
+        var entries = ChangeTracker.Entries()
+            .Where(e => typeof(BaseEntity).IsAssignableFrom(e.Entity.GetType()))
+            .ToList();
 
-        Set<T>().Update(entity);
+        foreach (var entry in entries.Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            var entity = entry.Entity as BaseEntity;
+
+            if (entry.State is EntityState.Modified)
+            {
+                if (entity is DeletableEntity deletableEntity)
+                {
+                    deletableEntity.IsDeleted = false;
+                    deletableEntity.DeletedAt = null;
+                }
+
+                entity.LastModifiedAt = DateTime.UtcNow;
+            }
+
+            if (entry.State is EntityState.Deleted)
+            {
+                if (entity is DeletableEntity deletableEntity)
+                {
+                    deletableEntity.IsDeleted = true;
+                    deletableEntity.DeletedAt = DateTime.UtcNow;
+                    entry.State = EntityState.Modified;
+                }
+            }
+        }
+
         await SaveChangesAsync(true, tokenSource.Token);
-        await cache.RefreshAsync(entity.Id, tokenSource.Token);
     }
 
     public async Task ExecuteTransactionAsync(Func<Task> action)
     {
-        ThrowIfDisposed();
-
         var strategy = Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
@@ -136,9 +107,16 @@ public partial class ApplicationDbContext : AuthenticationDbContext, IApplicatio
 
     public override async ValueTask DisposeAsync()
     {
-        await DisposeAsync(true);
-        await base.DisposeAsync();
+        tokenSource.Dispose();
+        tokenSource = null;
 
+        if (transaction is not null)
+        {
+            await transaction.DisposeAsync();
+            transaction = null;
+        }
+
+        await base.DisposeAsync();
         GC.SuppressFinalize(this);
     }
 
@@ -175,31 +153,6 @@ public partial class ApplicationDbContext : AuthenticationDbContext, IApplicatio
 
         return methods;
     }
-
-    private async ValueTask DisposeAsync(bool disposing)
-    {
-        if (!disposed)
-        {
-            if (disposing)
-            {
-                tokenSource.Dispose();
-                tokenSource = null;
-
-                if (transaction is not null)
-                {
-                    await transaction.DisposeAsync();
-                    transaction = null;
-                }
-
-                await DisposeConnectionAsync();
-            }
-
-            disposed = true;
-        }
-    }
-
-    private void ThrowIfDisposed()
-        => ObjectDisposedException.ThrowIf(disposed, GetType().FullName);
 
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {

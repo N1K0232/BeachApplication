@@ -16,7 +16,6 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
-        services.AddScoped<ISqlContext>(services => services.GetRequiredService<ApplicationDbContext>());
 
         return services;
     }

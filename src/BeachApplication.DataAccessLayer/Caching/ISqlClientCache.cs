@@ -12,5 +12,7 @@ public interface ISqlClientCache
 
     Task RemoveAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task SetAsync<T>(T entity, TimeSpan expirationTime, CancellationToken cancellationToken = default) where T : BaseEntity;
+    Task SetAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity;
+
+    Task UpdateAsync<T>(T entity, CancellationToken cancellationToken = default) where T : BaseEntity
 }
