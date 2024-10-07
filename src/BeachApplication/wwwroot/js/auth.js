@@ -51,7 +51,6 @@
 
                 if (errorMessage == null) {
                     window.localStorage.setItem('access_token', content.accessToken);
-                    window.localStorage.setItem('refresh_token', content.refreshToken);
                     window.location.href = '/';
                 }
                 else {

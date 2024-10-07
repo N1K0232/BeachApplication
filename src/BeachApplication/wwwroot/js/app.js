@@ -1,4 +1,10 @@
-﻿function dataURIToBlob(dataURI) {
+﻿function uuid() {
+    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+}
+
+function dataURIToBlob(dataURI) {
     const splitDataURI = dataURI.split(',')
     const byteString = splitDataURI[0].indexOf('base64') >= 0 ? atob(splitDataURI[1]) : decodeURI(splitDataURI[1])
     const mimeString = splitDataURI[0].split(':')[1].split(';')[0]
@@ -11,15 +17,7 @@
 }
 
 function GetAccessToken() {
-    return GetStorageItem('access_token');
-}
-
-function GetRefreshToken() {
-    return GetStorageItem('refresh_token');
-}
-
-function GetStorageItem(key) {
-    return window.localStorage.getItem(key);
+    return window.localStorage.getItem('access_token');
 }
 
 function GetErrorMessage(statusCode, content) {
