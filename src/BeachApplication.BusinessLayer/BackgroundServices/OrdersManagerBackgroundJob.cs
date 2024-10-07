@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Quartz;
 using TinyHelpers.Extensions;
 
-namespace BeachApplication.BusinessLayer.Diagnostics.BackgroundJobs;
+namespace BeachApplication.BusinessLayer.BackgroundServices;
 
 public class OrdersManagerBackgroundJob : IJob
 {
