@@ -6,8 +6,6 @@ public class AppSettings
 
     public string ApplicationDescription { get; init; }
 
-    public string ContainerName { get; init; }
-
     public string StorageFolder { get; init; }
 
     public string[] SupportedCultures { get; init; }

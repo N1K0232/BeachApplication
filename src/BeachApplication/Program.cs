@@ -3,15 +3,9 @@ using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using BeachApplication.BusinessLayer.Clients;
-using BeachApplication.BusinessLayer.Clients.Interfaces;
-using BeachApplication.BusinessLayer.Clients.Refit;
+using BeachApplication.BusinessLayer.BackgroundServices;
 using BeachApplication.BusinessLayer.Core;
-using BeachApplication.BusinessLayer.Diagnostics.BackgroundJobs;
-using BeachApplication.BusinessLayer.Diagnostics.HealthChecks;
 using BeachApplication.BusinessLayer.Mapping;
-using BeachApplication.BusinessLayer.Providers;
-using BeachApplication.BusinessLayer.Providers.Interfaces;
 using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
@@ -19,11 +13,9 @@ using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Authorization;
-using BeachApplication.DataAccessLayer.DataProtection;
 using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Extensions;
-using BeachApplication.Handlers;
 using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
@@ -50,7 +42,6 @@ using Polly.Timeout;
 using QRCoder;
 using Quartz;
 using Quartz.AspNetCore;
-using Refit;
 using Serilog;
 using SimpleAuthentication;
 using TinyHelpers.AspNetCore.Extensions;
@@ -75,42 +66,24 @@ var swaggerSettings = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.
 var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
 var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
 
-var translatorSettingsSection = builder.Configuration.GetSection(nameof(TranslatorSettings));
-builder.Services.Configure<TranslatorSettings>(translatorSettingsSection);
-
-var openWeatherMapSettingsSection = builder.Configuration.GetSection(nameof(OpenWeatherMapSettings));
-var openWeatherMapSettings = openWeatherMapSettingsSection.Get<OpenWeatherMapSettings>();
-
-builder.Services.AddRequestLocalization(appSettings.SupportedCultures);
-builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
+builder.Services.AddRazorPages();
+builder.Services.AddRouting();
 
 builder.Services.AddDefaultExceptionHandler();
 builder.Services.AddDefaultProblemDetails();
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddRouting();
-
-builder.Services.AddMemoryCache();
+builder.Services.AddRequestLocalization(appSettings.SupportedCultures);
 builder.Services.AddSimpleAuthentication(builder.Configuration);
 
-builder.Services.AddRazorPages();
-builder.Services.AddHealthChecks().AddCheck<SqlConnectionHealthCheck>("sql")
-    .AddDbContextCheck<ApplicationDbContext>("database")
-    .AddDbContextCheck<AuthenticationDbContext>("identity");
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
 
 builder.Services.AddDataProtection().SetApplicationName(appSettings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
-builder.Services.AddScoped<IDataProtectionService, DataProtectionService>();
-builder.Services.AddScoped<ITimeLimitedDataProtectionService, TimeLimitedDataProtectionService>();
-
 builder.Services.AddScoped(services =>
 {
-    var dataProtectionProvider = services.GetDataProtectionProvider();
-    return dataProtectionProvider.CreateProtector(appSettings.ApplicationName);
-});
+    var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
+    var dataProtector = dataProtectionProvider.CreateProtector(appSettings.ApplicationName);
 
-builder.Services.AddScoped(services =>
-{
-    var dataProtector = services.GetDataProtector(appSettings.ApplicationName);
     return dataProtector.ToTimeLimitedDataProtector();
 });
 
@@ -226,23 +199,8 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
     });
 });
 
-builder.Services.AddTransient<TransientErrorDelegatingHandler>();
-builder.Services.AddHttpClient("http").AddHttpMessageHandler<TransientErrorDelegatingHandler>();
-
 builder.Services.AddFluentEmail(emailSettings.EmailAddress).WithSendinblue();
-builder.Services.AddRefitClient<IOpenWeatherMapClient>().ConfigureHttpClient(httpClient =>
-{
-    httpClient.BaseAddress = new Uri(openWeatherMapSettings.ServiceUrl);
-})
-.ConfigurePrimaryHttpMessageHandler(_ =>
-{
-    var handler = new QueryStringInjectorHttpMessageHandler();
-    handler.Parameters.Add("units", "metric");
-    handler.Parameters.Add("lang", "IT");
-    handler.Parameters.Add("APPID", openWeatherMapSettings.ApiKey);
-
-    return handler;
-});
+builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
 
 builder.Services.AddSqlServerCaching(connectionString);
 builder.Services.AddSqlServerContext(connectionString);
@@ -308,12 +266,12 @@ builder.Services.AddHangfire(options =>
 
 builder.Services.AddHangfireServer();
 
-if (azureStorageConnectionString.HasValue() && appSettings.ContainerName.HasValue())
+if (azureStorageConnectionString.HasValue())
 {
     builder.Services.AddAzureStorage(options =>
     {
         options.ConnectionString = azureStorageConnectionString;
-        options.ContainerName = appSettings.ContainerName;
+        options.ContainerName = appSettings.StorageFolder;
     });
 }
 else
@@ -323,9 +281,6 @@ else
         options.StorageFolder = appSettings.StorageFolder;
     });
 }
-
-builder.Services.AddHttpClient<IAzureTokenProvider, AzureTokenProvider>();
-builder.Services.AddHttpClient<ITranslatorClient, TranslatorClient>();
 
 builder.Services.Scan(scan => scan.FromAssemblyOf<OrderService>()
     .AddClasses(classes => classes.InNamespaceOf<OrderService>())
