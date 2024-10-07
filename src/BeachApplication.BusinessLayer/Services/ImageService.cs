@@ -4,6 +4,7 @@ using BeachApplication.BusinessLayer.Internal;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.StorageProviders;
 using Microsoft.EntityFrameworkCore;
@@ -13,32 +14,42 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ImageService(IApplicationDbContext db, IStorageProvider storageProvider, IMapper mapper) : IImageService
+public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStorageProvider storageProvider, IMapper mapper) : IImageService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
         var image = await db.GetAsync<Entities.Image>(id);
-        if (image is not null)
+        if (image is null)
         {
-            await db.DeleteAsync(image);
-            await storageProvider.DeleteAsync(image.Path);
-
-            return Result.Ok();
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
+        await db.DeleteAsync(image);
+        await db.SaveAsync();
+
+        await storageProvider.DeleteAsync(image.Path);
+        var exists = await cache.ExistsAsync(id);
+
+        if (exists)
+        {
+            await cache.RemoveAsync(id);
+        }
+
+        return Result.Ok();
     }
 
     public async Task<Result<Image>> GetAsync(Guid id)
     {
         var dbImage = await db.GetAsync<Entities.Image>(id);
-        if (dbImage is not null)
+        if (dbImage is null)
         {
-            var image = mapper.Map<Image>(dbImage);
-            return image;
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
+        var image = mapper.Map<Image>(dbImage);
+        await cache.RefreshAsync(id);
+
+        return image;
     }
 
     public async Task<Result<IEnumerable<Image>>> GetListAsync()
@@ -78,6 +89,9 @@ public class ImageService(IApplicationDbContext db, IStorageProvider storageProv
         };
 
         await db.InsertAsync(image);
+        await db.SaveAsync();
+
+        await cache.SetAsync(image);
         return mapper.Map<Image>(image);
     }
 }

@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -12,30 +13,45 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICategoryService
+public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IMapper mapper) : ICategoryService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var category = await db.GetAsync<Entities.Category>(id);
-        if (category is not null)
+        var dbCategory = await db.GetAsync<Entities.Category>(id);
+        if (dbCategory is null)
         {
-            await db.DeleteAsync(category);
-            return Result.Ok();
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
+        await db.DeleteAsync(dbCategory);
+        await db.SaveAsync();
+
+        if (await cache.ExistsAsync(id))
+        {
+            await cache.RemoveAsync(id);
+        }
+
+        return Result.Ok();
     }
 
     public async Task<Result<Category>> GetAsync(Guid id)
     {
-        var dbCategory = await db.GetAsync<Entities.Category>(id);
-        if (dbCategory is not null)
+        var cachedCategory = await cache.GetAsync<Entities.Category>(id);
+        if (cachedCategory is not null)
         {
-            var category = mapper.Map<Category>(dbCategory);
-            return category;
+            return mapper.Map<Category>(cachedCategory);
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
+        var dbCategory = await db.GetAsync<Entities.Category>(id);
+        if (dbCategory is null)
+        {
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
+        }
+
+        var category = mapper.Map<Category>(dbCategory);
+        await cache.RefreshAsync(id);
+
+        return category;
     }
 
     public async Task<Result<IEnumerable<Category>>> GetListAsync(string name)
@@ -64,25 +80,25 @@ public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICatego
             return Result.Fail(FailureReasons.Conflict, "Cannot insert a category with the same name", "Cannot insert a category with the same name");
         }
 
-        var category = mapper.Map<Entities.Category>(request);
-        await db.InsertAsync(category);
+        var dbCategory = mapper.Map<Entities.Category>(request);
+        await db.InsertAsync(dbCategory);
 
-        return mapper.Map<Category>(category);
+        await cache.SetAsync(dbCategory);
+        return mapper.Map<Category>(dbCategory);
     }
 
     public async Task<Result<Category>> UpdateAsync(Guid id, SaveCategoryRequest request)
     {
-        var query = db.GetData<Entities.Category>(trackingChanges: true);
-        var category = await query.FirstOrDefaultAsync(c => c.Id == id);
-
-        if (category is not null)
+        var dbCategory = await db.GetData<Entities.Category>(trackingChanges: true).FirstOrDefaultAsync(c => c.Id == id);
+        if (dbCategory is null)
         {
-            mapper.Map(request, category);
-            await db.UpdateAsync(category);
-
-            return mapper.Map<Category>(category);
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
+        mapper.Map(request, dbCategory);
+        await db.SaveAsync();
+
+        await cache.UpdateAsync(dbCategory);
+        return mapper.Map<Category>(dbCategory);
     }
 }
