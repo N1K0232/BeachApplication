@@ -2,7 +2,7 @@
 
 public class AzureStorageOptions
 {
-    public string ConnectionString { get; set; } = null!;
+    public string ConnectionString { get; set; }
 
-    public string ContainerName { get; set; } = null!;
+    public string ContainerName { get; set; }
 }

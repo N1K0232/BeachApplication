@@ -2,5 +2,5 @@
 
 public class FileSystemStorageOptions
 {
-    public string StorageFolder { get; set; } = null!;
+    public string StorageFolder { get; set; }
 }
