@@ -10,7 +10,7 @@ public interface IApplicationDbContext
 
     ValueTask<T> GetAsync<T>(Guid id) where T : BaseEntity;
 
-    IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity;
+    IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false) where T : BaseEntity;
 
     Task InsertAsync<T>(T entity) where T : BaseEntity;
 

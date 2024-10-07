@@ -41,9 +41,9 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         return entity;
     }
 
-    public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false, string sql = null, params object[] parameters) where T : BaseEntity
+    public IQueryable<T> GetData<T>(bool ignoreQueryFilters = false, bool trackingChanges = false) where T : BaseEntity
     {
-        var set = GenerateQuery<T>(sql, parameters);
+        var set = Set<T>().AsQueryable();
 
         if (ignoreQueryFilters)
         {
@@ -176,18 +176,6 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
                 genericMethod.Invoke(this, [builder]);
             }
         }
-    }
-
-    private IQueryable<T> GenerateQuery<T>(string sql, params object[] parameters) where T : BaseEntity
-    {
-        var set = Set<T>();
-
-        if (!string.IsNullOrWhiteSpace(sql) && parameters.Length > 0)
-        {
-            return set.FromSqlRaw(sql, parameters);
-        }
-
-        return set;
     }
 
     private IEnumerable<EntityEntry> GetEntries(Type entityType)
