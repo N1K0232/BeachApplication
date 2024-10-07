@@ -26,7 +26,8 @@ public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IM
         await db.DeleteAsync(dbCategory);
         await db.SaveAsync();
 
-        if (await cache.ExistsAsync(id))
+        var cacheExists = await cache.ExistsAsync(id);
+        if (cacheExists)
         {
             await cache.RemoveAsync(id);
         }

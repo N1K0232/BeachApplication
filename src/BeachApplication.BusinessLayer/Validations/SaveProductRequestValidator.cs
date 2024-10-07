@@ -8,7 +8,7 @@ public class SaveProductRequestValidator : AbstractValidator<SaveProductRequest>
 {
     public SaveProductRequestValidator()
     {
-        RuleFor(p => p.CategoryId)
+        RuleFor(p => p.Category)
             .NotEmpty()
             .WithName(EntityNames.Category)
             .WithMessage(ErrorMessages.FieldRequired);

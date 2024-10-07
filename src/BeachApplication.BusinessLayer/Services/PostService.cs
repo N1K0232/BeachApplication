@@ -18,6 +18,8 @@ public class PostService(IApplicationDbContext db, IMapper mapper) : IPostServic
         if (post is not null)
         {
             await db.DeleteAsync(post);
+            await db.SaveAsync();
+
             return Result.Ok();
         }
 
@@ -47,21 +49,21 @@ public class PostService(IApplicationDbContext db, IMapper mapper) : IPostServic
 
     public async Task<Result<Post>> InsertAsync(SavePostRequest request)
     {
-        var post = mapper.Map<Entities.Post>(request);
-        await db.InsertAsync(post);
+        var dbPost = mapper.Map<Entities.Post>(request);
+        await db.InsertAsync(dbPost);
 
-        return mapper.Map<Post>(post);
+        return mapper.Map<Post>(dbPost);
     }
 
     public async Task<Result<Post>> UpdateAsync(Guid id, SavePostRequest request)
     {
-        var post = await db.GetData<Entities.Post>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == id);
-        if (post is not null)
+        var dbPost = await db.GetData<Entities.Post>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == id);
+        if (dbPost is not null)
         {
-            mapper.Map(request, post);
-            await db.UpdateAsync(post);
+            mapper.Map(request, dbPost);
+            await db.SaveAsync();
 
-            return mapper.Map<Post>(post);
+            return mapper.Map<Post>(dbPost);
         }
 
         return Result.Fail(FailureReasons.ItemNotFound, "No post found");

@@ -12,6 +12,7 @@ public class ProductMapperProfile : Profile
         CreateMap<Entities.Product, Product>()
             .ForMember(p => p.Category, options => options.MapFrom(p => p.Category.Name));
 
-        CreateMap<SaveProductRequest, Entities.Product>();
+        CreateMap<SaveProductRequest, Entities.Product>()
+            .ForMember(p => p.Category, options => options.Ignore());
     }
 }

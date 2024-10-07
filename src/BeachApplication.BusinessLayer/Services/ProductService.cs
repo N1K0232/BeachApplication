@@ -2,6 +2,7 @@
 using AutoMapper;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -11,34 +12,48 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ProductService(IApplicationDbContext db, IMapper mapper) : IProductService
+public class ProductService(IApplicationDbContext db, ISqlClientCache cache, IMapper mapper) : IProductService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var query = db.GetData<Entities.Product>(trackingChanges: true);
-        var product = await query.FirstOrDefaultAsync(p => p.Id == id);
-
-        if (product is not null)
+        var dbProduct = await db.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == id);
+        if (dbProduct is null)
         {
-            await db.DeleteAsync(product);
-            return Result.Ok();
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
+        await db.DeleteAsync(dbProduct);
+        await db.SaveAsync();
+
+        var cacheExists = await cache.ExistsAsync(id);
+        if (cacheExists)
+        {
+            await cache.RemoveAsync(id);
+        }
+
+        return Result.Ok();
     }
 
     public async Task<Result<Product>> GetAsync(Guid id)
     {
+        var cachedProduct = await cache.GetAsync<Entities.Product>(id);
+        if (cachedProduct is not null)
+        {
+            return mapper.Map<Product>(cachedProduct);
+        }
+
         var query = db.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
         var dbProduct = await query.FirstOrDefaultAsync(p => p.Id == id);
 
-        if (dbProduct is not null)
+        if (dbProduct is null)
         {
-            var product = mapper.Map<Product>(dbProduct);
-            return product;
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
+        var product = mapper.Map<Product>(dbProduct);
+        await cache.RefreshAsync(id);
+
+        return product;
     }
 
     public async Task<Result<PaginatedList<Product>>> GetListAsync(string name, string category, int pageIndex, int itemsPerPage, string orderBy)
@@ -66,45 +81,68 @@ public class ProductService(IApplicationDbContext db, IMapper mapper) : IProduct
 
     public async Task<Result<Product>> InsertAsync(SaveProductRequest request)
     {
-        var query = db.GetData<Entities.Product>();
-        var exists = await query.AnyAsync(p => p.Name == request.Name && p.Quantity == request.Quantity && p.Price == request.Price);
-
+        var exists = await ExistsAsync(request.Name, request.Description);
         if (exists)
         {
             return Result.Fail(FailureReasons.Conflict, string.Format(ErrorMessages.EntityExists, EntityNames.Product));
         }
 
-        var categoryExists = await CategoryExistsAsync(request.CategoryId);
-        if (!categoryExists)
+        var category = await GetCategoryAsync(request.Category);
+        if (category is null)
         {
-            return Result.Fail(FailureReasons.ClientError, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, request.CategoryId));
+            return Result.Fail(FailureReasons.ClientError, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, request.Category));
         }
 
-        var product = mapper.Map<Entities.Product>(request);
-        await db.InsertAsync(product);
+        var dbProduct = mapper.Map<Entities.Product>(request);
+        dbProduct.CategoryId = category.Id;
 
-        return mapper.Map<Product>(product);
+        await db.InsertAsync(dbProduct);
+        await db.SaveAsync();
+
+        await cache.SetAsync(dbProduct);
+        return mapper.Map<Product>(dbProduct);
     }
 
     public async Task<Result<Product>> UpdateAsync(Guid id, SaveProductRequest request)
     {
-        var query = db.GetData<Entities.Product>(ignoreQueryFilters: true, trackingChanges: true);
-        var product = await query.FirstOrDefaultAsync(p => p.Id == id);
+        var query = db.GetData<Entities.Product>(true, true);
+        var dbProduct = await query.FirstOrDefaultAsync(p => p.Id == id);
 
-        if (product is not null)
+        if (dbProduct is null)
         {
-            mapper.Map(request, product);
-            await db.UpdateAsync(product);
-
-            return mapper.Map<Product>(product);
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, id));
+        var exists = await ExistsAsync(request.Name, request.Description);
+        if (exists)
+        {
+            return Result.Fail(FailureReasons.Conflict, string.Format(ErrorMessages.EntityExists, EntityNames.Product));
+        }
+
+        var category = await GetCategoryAsync(request.Category);
+        if (category is null)
+        {
+            return Result.Fail(FailureReasons.ClientError, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, request.Category));
+        }
+
+        mapper.Map(request, dbProduct);
+        dbProduct.CategoryId = category.Id;
+
+        await db.SaveAsync();
+        await cache.UpdateAsync(dbProduct);
+
+        return mapper.Map<Product>(dbProduct);
     }
 
-    private async Task<bool> CategoryExistsAsync(Guid id)
+    private async Task<bool> ExistsAsync(string name, string description)
     {
-        var query = db.GetData<Entities.Category>();
-        return await query.AnyAsync(c => c.Id == id);
+        var query = db.GetData<Entities.Product>();
+        return await query.AnyAsync(p => p.Name == name && p.Description == description);
+    }
+
+    private async Task<Category> GetCategoryAsync(string name)
+    {
+        var category = await db.GetData<Entities.Category>().FirstOrDefaultAsync(c => c.Name == name);
+        return mapper.Map<Category>(category);
     }
 }

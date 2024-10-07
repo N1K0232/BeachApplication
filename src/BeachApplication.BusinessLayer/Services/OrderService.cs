@@ -4,6 +4,7 @@ using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Enums;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
@@ -14,52 +15,8 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class OrderService(IApplicationDbContext db, IUserService userService, IMapper mapper) : IOrderService
+public class OrderService(IApplicationDbContext db, ISqlClientCache cache, IUserService userService, IMapper mapper) : IOrderService
 {
-    public async Task<Result<Order>> AddOrderDetailAsync(SaveOrderRequest request)
-    {
-        var dbOrder = await db.GetData<Entities.Order>().FirstAsync(o => o.Id == request.OrderId);
-        var dbProduct = await db.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == request.ProductId);
-
-        if (dbProduct is null)
-        {
-            return Result.Fail(FailureReasons.ClientError, string.Format(ErrorMessages.ItemNotFound, EntityNames.Product, request.ProductId));
-        }
-
-        if (dbProduct.Quantity is not null)
-        {
-            dbProduct.Quantity -= request.Quantity;
-        }
-
-        await db.ExecuteTransactionAsync(async () =>
-        {
-            var orderDetail = mapper.Map<Entities.OrderDetail>(request);
-            orderDetail.Price = Convert.ToDecimal(dbProduct.Price * request.Quantity);
-
-            await db.InsertAsync(orderDetail);
-        });
-
-        var order = mapper.Map<Order>(dbOrder);
-        order.OrderDetails = await LoadOrderDetailsAsync(dbOrder.Id);
-
-        return order;
-    }
-
-    public async Task<Result<Order>> CreateAsync()
-    {
-        var userId = await userService.GetIdAsync();
-        var dbOrder = new Entities.Order
-        {
-            UserId = userId,
-            Status = OrderStatus.New,
-            OrderDate = DateTime.UtcNow.ToDateOnly(),
-            OrderTime = DateTime.UtcNow.ToTimeOnly(),
-        };
-
-        await db.InsertAsync(dbOrder);
-        return mapper.Map<Order>(dbOrder);
-    }
-
     public async Task<Result> DeleteAsync(Guid id)
     {
         var query = db.GetData<Entities.Order>(trackingChanges: true);
@@ -115,10 +72,58 @@ public class OrderService(IApplicationDbContext db, IUserService userService, IM
         return new PaginatedList<Order>(orders, totalCount, hasNextPage);
     }
 
+    public async Task<Result<Order>> SaveAsync(SaveOrderRequest request)
+    {
+        var dbOrder = await db.GetAsync<Entities.Order>(request.Id);
+        if (dbOrder is null)
+        {
+            var userId = await userService.GetIdAsync();
+            dbOrder = new Entities.Order
+            {
+                Id = request.Id,
+                UserId = userId,
+                Status = OrderStatus.New,
+                OrderDate = DateTime.UtcNow.ToDateOnly(),
+                OrderTime = DateTime.UtcNow.ToTimeOnly()
+            };
+
+            await db.InsertAsync(dbOrder);
+            await cache.SetAsync(dbOrder);
+            await db.SaveAsync();
+        }
+
+        var dbProduct = await db.GetData<Entities.Product>(trackingChanges: true).FirstOrDefaultAsync(p => p.Id == request.ProductId);
+        if (dbProduct is null)
+        {
+            return Result.Fail(FailureReasons.ClientError, "Product not found");
+        }
+
+        if (dbProduct.Quantity is not null)
+        {
+            if (dbProduct.Quantity > request.Quantity)
+            {
+                dbProduct.Quantity -= request.Quantity;
+            }
+            else
+            {
+                return Result.Fail(FailureReasons.ClientError, "You specified too many products");
+            }
+        }
+
+        var details = mapper.Map<Entities.OrderDetail>(request);
+        await db.InsertAsync(details);
+
+        await db.SaveAsync();
+        await cache.SetAsync(details);
+
+        return mapper.Map<Order>(dbOrder);
+    }
+
     private async Task<IEnumerable<OrderDetail>> LoadOrderDetailsAsync(Guid id)
     {
-        var query = db.GetData<Entities.OrderDetail>();
-        var orderDetails = await query.Where(o => o.OrderId == id).ToListAsync();
+        var orderDetails = await db.GetData<Entities.OrderDetail>()
+            .Where(o => o.OrderId == id)
+            .ToListAsync();
 
         return mapper.Map<IEnumerable<OrderDetail>>(orderDetails);
     }

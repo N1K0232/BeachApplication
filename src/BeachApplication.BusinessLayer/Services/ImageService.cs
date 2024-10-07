@@ -28,9 +28,9 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
         await db.SaveAsync();
 
         await storageProvider.DeleteAsync(image.Path);
-        var exists = await cache.ExistsAsync(id);
+        var cacheExists = await cache.ExistsAsync(id);
 
-        if (exists)
+        if (cacheExists)
         {
             await cache.RemoveAsync(id);
         }
@@ -79,7 +79,7 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
     public async Task<Result<Image>> UploadAsync(string fileName, Stream stream)
     {
         var path = PathGenerator.CreatePath(fileName);
-        await storageProvider.SaveAsync(path, stream, true);
+        await storageProvider.SaveAsync(stream, path);
 
         var image = new Entities.Image
         {

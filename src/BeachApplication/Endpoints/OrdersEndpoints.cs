@@ -14,18 +14,10 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
     {
         var orderApiGroup = endpoints.MapGroup("/api/orders");
 
-        orderApiGroup.MapPost("details", AddOrderDetailAsync)
+        orderApiGroup.MapPost("save", SaveAsync)
             .RequireAuthorization("UserActive")
             .WithValidation<SaveOrderRequest>()
             .Produces<Order>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .WithOpenApi();
-
-        orderApiGroup.MapPost("create", CreateAsync)
-            .RequireAuthorization("UserActive")
-            .Produces<Order>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -59,16 +51,10 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
     }
 
-    private static async Task<IResult> AddOrderDetailAsync(IOrderService orderService, SaveOrderRequest request, HttpContext httpContext)
+    private static async Task<IResult> SaveAsync(IOrderService orderService, SaveOrderRequest request, HttpContext httpContext)
     {
-        var result = await orderService.AddOrderDetailAsync(request);
+        var result = await orderService.SaveAsync(request);
         return httpContext.CreateResponse(result);
-    }
-
-    private static async Task<IResult> CreateAsync(IOrderService orderService, HttpContext httpContext)
-    {
-        var result = await orderService.CreateAsync();
-        return httpContext.CreateResponse(result, "GetOrder", new { id = result.Content?.Id });
     }
 
     private static async Task<IResult> DeleteAsync(IOrderService orderService, Guid id, HttpContext httpContext)
