@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using BeachApplication.BusinessLayer.Internal;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
@@ -52,13 +51,15 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
         return image;
     }
 
-    public async Task<Result<IEnumerable<Image>>> GetListAsync()
+    public async Task<Result<PaginatedList<Image>>> GetListAsync()
     {
-        var images = await db.GetData<Entities.Image>()
-            .OrderBy(i => i.Path).ProjectTo<Image>(mapper.ConfigurationProvider)
-            .ToListAsync();
+        var query = db.GetData<Entities.Image>();
+        var totalCount = await query.CountAsync();
 
-        return images;
+        var dbImages = await query.OrderBy(i => i.Path).ToListAsync();
+        var images = mapper.Map<IEnumerable<Image>>(dbImages);
+
+        return new PaginatedList<Image>(images, totalCount);
     }
 
     public async Task<Result<StreamFileContent>> ReadAsync(Guid id)

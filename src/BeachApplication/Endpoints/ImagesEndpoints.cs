@@ -2,6 +2,7 @@
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models;
 using MinimalHelpers.Routing;
+using OperationResults;
 using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
@@ -32,7 +33,7 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
 
         imagesApiGroup.MapGet(string.Empty, GetListAsync)
             .RequireAuthorization("UserActive")
-            .Produces(StatusCodes.Status200OK)
+            .Produces<PaginatedList<Image>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .WithOpenApi();

@@ -9,7 +9,7 @@ public interface IImageService
 
     Task<Result<Image>> GetAsync(Guid id);
 
-    Task<Result<IEnumerable<Image>>> GetListAsync();
+    Task<Result<PaginatedList<Image>>> GetListAsync();
 
     Task<Result<StreamFileContent>> ReadAsync(Guid id);
 
