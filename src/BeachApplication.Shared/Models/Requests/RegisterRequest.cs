@@ -6,7 +6,7 @@ public class RegisterRequest
 
     public string LastName { get; init; } = string.Empty;
 
-    public string PhoneNumber { get; init; } = string.Empty;
+    public string? PhoneNumber { get; init; }
 
     public string Email { get; init; } = string.Empty;
 

@@ -44,9 +44,10 @@ public class IdentityUserService(IServiceProvider services, IConfiguration confi
         var userExists = await userManager.UserExistsAsync(user.UserName);
         if (!userExists)
         {
+            user.TwoFactorEnabled = true;
             await userManager.CreateAsync(user, password);
-            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
             await userManager.ConfirmEmailAsync(user, token);
             await userManager.AddToRolesAsync(user, roles);
         }
