@@ -73,12 +73,11 @@ builder.Services.AddDefaultExceptionHandler();
 builder.Services.AddDefaultProblemDetails();
 
 builder.Services.AddRequestLocalization(appSettings.SupportedCultures);
-builder.Services.AddSimpleAuthentication(builder.Configuration);
-
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
 
+builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
 builder.Services.AddDataProtection().SetApplicationName(appSettings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
+
 builder.Services.AddScoped(services =>
 {
     var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
@@ -124,20 +123,18 @@ builder.Services.ConfigureValidation(options =>
     options.ErrorResponseFormat = ValidationErrorResponseFormat.List;
 });
 
+builder.Services.AddSimpleAuthentication(builder.Configuration);
+
 if (swaggerSettings.Enabled)
 {
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
-        options.SwaggerDoc(swaggerSettings.Version, new OpenApiInfo
-        {
-            Title = swaggerSettings.Title,
-            Version = swaggerSettings.Version
-        });
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Beach App Api", Version = "v1" });
+        options.AddSimpleAuthentication(builder.Configuration);
 
         options.AddDefaultResponse();
         options.AddAcceptLanguageHeader();
-        options.AddSimpleAuthentication(builder.Configuration);
     })
     .AddFluentValidationRulesToSwagger(options =>
     {
@@ -219,34 +216,6 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
-builder.Services.AddScoped<IUserService, HttpUserService>();
-
-builder.Services.AddAuthorization(options =>
-{
-    var policyBuilder = new AuthorizationPolicyBuilder().RequireAuthenticatedUser();
-    policyBuilder.Requirements.Add(new UserActiveRequirement());
-
-    options.DefaultPolicy = policyBuilder.Build();
-
-    options.AddPolicy("Administrator", policy =>
-    {
-        policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator);
-        policy.Requirements.Add(new UserActiveRequirement());
-    });
-
-    options.AddPolicy("PowerUser", policy =>
-    {
-        policy.RequireAuthenticatedUser().RequireRole(RoleNames.PowerUser);
-        policy.Requirements.Add(new UserActiveRequirement());
-    });
-
-    options.AddPolicy("UserActive", policy =>
-    {
-        policy.RequireAuthenticatedUser().RequireRole(RoleNames.User);
-        policy.Requirements.Add(new UserActiveRequirement());
-    });
-});
-
 builder.Services.AddHangfire(options =>
 {
     var storageOptions = new SqlServerStorageOptions
@@ -286,6 +255,9 @@ builder.Services.Scan(scan => scan.FromAssemblyOf<OrderService>()
     .AddClasses(classes => classes.InNamespaceOf<OrderService>())
     .AsImplementedInterfaces()
     .WithScopedLifetime());
+
+builder.Services.AddScoped<IUserService, HttpUserService>();
+builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
 
 builder.Services.AddHostedService<DatabaseService>();
 builder.Services.AddHostedService<IdentityRoleService>();
@@ -350,7 +322,7 @@ if (swaggerSettings.Enabled)
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", $"{swaggerSettings.Title} {swaggerSettings.Version}");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Beach App Api v1");
         options.InjectStylesheet("/css/swagger.css");
     });
 }

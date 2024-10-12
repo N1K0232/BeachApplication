@@ -1,4 +1,6 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
+using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.Routing;
@@ -13,7 +15,11 @@ public class PostsEndpoints : IEndpointRouteHandlerBuilder
         var postApiGroup = endpoints.MapGroup("/api/posts");
 
         postApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -22,7 +28,7 @@ public class PostsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         postApiGroup.MapGet("{id:guid}", GetAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<Post>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -31,7 +37,7 @@ public class PostsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         postApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<IEnumerable<Post>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -39,7 +45,11 @@ public class PostsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         postApiGroup.MapPost(string.Empty, InsertAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .Produces<Post>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -48,7 +58,11 @@ public class PostsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         postApiGroup.MapPut("{id:guid}", UpdateAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .Produces<Post>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

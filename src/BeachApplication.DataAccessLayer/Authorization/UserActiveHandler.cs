@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using BeachApplication.DataAccessLayer.Entities.Identity;
-using BeachApplication.DataAccessLayer.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 
@@ -13,12 +12,10 @@ public class UserActiveHandler(UserManager<ApplicationUser> userManager) : Autho
         var isAuthenticated = context.User.Identity?.IsAuthenticated ?? false;
         if (isAuthenticated)
         {
-            var userName = context.User.GetClaimValueInternal(ClaimTypes.Name);
-            var user = await userManager.FindByNameAsync(userName);
-
+            var user = await userManager.GetUserAsync(context.User);
             var lockedOut = await userManager.IsLockedOutAsync(user);
-            var securityStamp = context.User.GetClaimValueInternal(ClaimTypes.SerialNumber);
 
+            var securityStamp = context.User.FindFirstValue(ClaimTypes.SerialNumber);
             if (!lockedOut && securityStamp == user.SecurityStamp)
             {
                 context.Succeed(requirement);

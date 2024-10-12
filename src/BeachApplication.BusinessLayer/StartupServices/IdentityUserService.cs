@@ -19,24 +19,26 @@ public class IdentityUserService(IServiceProvider services, IConfiguration confi
         {
             FirstName = administratorUserSection["FirstName"],
             Email = administratorUserSection["Email"],
-            UserName = administratorUserSection["Email"]
+            UserName = administratorUserSection["Email"],
+            TwoFactorEnabled = Convert.ToBoolean(administratorUserSection["TwoFactorEnabled"])
         };
 
         var powerUser = new ApplicationUser
         {
             FirstName = powerUserSection["FirstName"],
             Email = powerUserSection["Email"],
-            UserName = powerUserSection["Email"]
+            UserName = powerUserSection["Email"],
+            TwoFactorEnabled = Convert.ToBoolean(powerUserSection["TwoFactorEnabled"])
         };
 
         var administratorUserPassword = administratorUserSection["Password"];
         var powerUserPassword = powerUserSection["Password"];
 
-        await CreateAsync(administratorUser, administratorUserPassword, [RoleNames.Administrator, RoleNames.User]);
-        await CreateAsync(powerUser, powerUserPassword, [RoleNames.PowerUser, RoleNames.User]);
+        await CreateAsync(administratorUser, administratorUserPassword, RoleNames.Administrator);
+        await CreateAsync(powerUser, powerUserPassword, RoleNames.PowerUser);
     }
 
-    private async Task CreateAsync(ApplicationUser user, string password, IEnumerable<string> roles)
+    private async Task CreateAsync(ApplicationUser user, string password, string role)
     {
         using var scope = services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -44,12 +46,11 @@ public class IdentityUserService(IServiceProvider services, IConfiguration confi
         var userExists = await userManager.UserExistsAsync(user.UserName);
         if (!userExists)
         {
-            user.TwoFactorEnabled = true;
             await userManager.CreateAsync(user, password);
+            await userManager.AddToRoleAsync(user, role);
 
             var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
             await userManager.ConfirmEmailAsync(user, token);
-            await userManager.AddToRolesAsync(user, roles);
         }
     }
 

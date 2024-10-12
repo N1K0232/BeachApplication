@@ -1,4 +1,6 @@
 ﻿using BeachApplication.BusinessLayer.Services;
+using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.FluentValidation;
@@ -15,7 +17,11 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
         var productsApiGroup = endpoints.MapGroup("/api/products");
 
         productsApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -23,7 +29,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapGet("{id:guid}", GetAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .WithName("GetProduct")
             .Produces<Product>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -32,7 +38,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<PaginatedList<Product>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -40,7 +46,11 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapPost(string.Empty, InsertAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .WithValidation<SaveProductRequest>()
             .Produces<Product>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -51,7 +61,11 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapPut("{id:guid}", UpdateAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .WithValidation<SaveProductRequest>()
             .Produces<Product>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)

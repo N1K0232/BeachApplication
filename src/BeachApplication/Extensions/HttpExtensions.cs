@@ -6,13 +6,11 @@ namespace BeachApplication.Extensions;
 
 public static partial class HttpExtensions
 {
-    public static bool IsMobileRequest(this HttpContext context)
-        => context.Request.IsMobile();
-
-    public static bool IsMobile(this HttpRequest request)
+    public static bool IsMobileRequest(this HttpContext httpContext)
     {
-        var userAgent = request.Headers[HeaderNames.UserAgent].ToString();
+        string userAgent = httpContext.Request.Headers[HeaderNames.UserAgent];
         var isMobileBrowser = false;
+
         if (userAgent?.Length > 4 && (MobileBrowserRegex().IsMatch(userAgent) || MobileBrowserVersionRegex().IsMatch(userAgent.AsSpan(0, 4))))
         {
             isMobileBrowser = true;
@@ -21,35 +19,44 @@ public static partial class HttpExtensions
         return isMobileBrowser;
     }
 
-    public static string GetCultureFromRoute(this HttpContext context)
-        => RouteCultureRegex().Match(context.Request.Path).Groups["culture"].Value.ToLowerInvariant();
-
-    public static string GetPathWithCulture(this HttpContext context, string culture)
+    public static string GetCultureFromRoute(this HttpContext httpContext)
     {
-        var path = RouteCultureRegex().Replace(context.Request.Path.ToString(), "/");
-        var newPath = $"/{culture}{path}{context.Request.QueryString}";
+        var path = httpContext.Request.Path;
+        var match = RouteCultureRegex().Match(path);
 
-        return newPath;
+        return match.Groups["culture"].Value.ToLowerInvariant();
     }
 
-    public static bool IsApiRequest(this HttpContext context)
-        => context.Request.Path.StartsWithSegments("/api");
+    public static string GetPathWithCulture(this HttpContext httpContext, string culture)
+    {
+        string path = httpContext.Request.Path;
+        var query = httpContext.Request.QueryString;
 
-    public static bool IsSwaggerRequest(this HttpContext context)
-        => context.Request.Path.StartsWithSegments("/swagger");
+        var newPath = RouteCultureRegex().Replace(path, "/");
+        return $"/{culture}{newPath}{query}";
+    }
 
-    public static bool IsWebRequest(this HttpContext context)
-        => !IsApiRequest(context) && !IsSwaggerRequest(context);
+    public static bool IsApiRequest(this HttpContext httpContext)
+    {
+        return httpContext.Request.Path.StartsWithSegments("/api");
+    }
 
-    public static string Content(this IUrlHelper urlHelper, HttpContext context, string contentPath)
-        => Content(urlHelper, context.Request, contentPath);
+    public static bool IsSwaggerRequest(this HttpContext httpContext)
+    {
+        return httpContext.Request.Path.StartsWithSegments("/swagger");
+    }
 
-    public static string Content(this IUrlHelper urlHelper, HttpRequest request, string contentPath)
+    public static bool IsWebRequest(this HttpContext httpContext)
+    {
+        return !httpContext.IsApiRequest() && !httpContext.IsSwaggerRequest();
+    }
+
+    public static string Content(this IUrlHelper urlHelper, HttpContext httpContext, string contentPath)
     {
         var path = urlHelper.Content(contentPath);
-        var url = $"{request.Scheme}://{request.Host}{request.PathBase}{path}";
+        var request = httpContext.Request;
 
-        return url;
+        return $"{request.Scheme}://{request.Host}{request.PathBase}{path}";
     }
 
     [GeneratedRegex("(android|bb\\d+|meego).+mobile|avantgo|bada\\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\\.(browser|link)|vodafone|wap|windows ce|xda|xiino", RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled)]

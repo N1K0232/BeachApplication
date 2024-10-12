@@ -20,6 +20,10 @@ function GetAccessToken() {
     return window.localStorage.getItem('access_token');
 }
 
+function GetTwoFactorToken() {
+    return window.localStorage.getItem('2fa_token');
+}
+
 function GetErrorMessage(statusCode, content) {
     if (statusCode >= 200 && statusCode <= 299)
         return null;

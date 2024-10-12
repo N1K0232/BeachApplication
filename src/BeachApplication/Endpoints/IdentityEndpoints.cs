@@ -3,7 +3,6 @@ using System.Security.Claims;
 using AutoMapper;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Entities.Identity;
-using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
 using FluentEmail.Core;
@@ -22,23 +21,6 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
         var identityApiGroup = endpoints.MapGroup("/api/auth");
-
-        identityApiGroup.MapPost("/enable2fa", EnableTwoFactorAsync)
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .RequireAuthorization("UserActive")
-            .WithName("enable2fa")
-            .WithOpenApi();
-
-        identityApiGroup.MapGet("/profile", GetMeAsync)
-            .Produces<User>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .RequireAuthorization("UserActive")
-            .WithName("profile")
-            .WithOpenApi();
 
         identityApiGroup.MapPost("/login", LoginAsync)
             .WithValidation<LoginRequest>()
@@ -63,24 +45,6 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithName("register")
             .WithOpenApi();
 
-        identityApiGroup.MapPost("/resetpassword", ResetPasswordAsync)
-            .WithValidation<ResetPasswordRequest>()
-            .Produces<ResetPasswordResponse>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .AllowAnonymous()
-            .WithName("resetpassword")
-            .WithOpenApi();
-
-        identityApiGroup.MapPost("/updatepassword", UpdatePasswordAsync)
-            .WithValidation<ChangePasswordRequest>()
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .AllowAnonymous()
-            .WithName("updatepassword")
-            .WithOpenApi();
-
         identityApiGroup.MapPost("/validate2fa", ValidateAsync)
             .WithValidation<TwoFactorValidationRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
@@ -96,28 +60,6 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .AllowAnonymous()
             .WithName("verifyemail")
             .WithOpenApi();
-    }
-
-    private static async Task<IResult> EnableTwoFactorAsync(UserManager<ApplicationUser> userManager, ClaimsPrincipal claimsPrincipal)
-    {
-        var user = await userManager.GetUserAsync(claimsPrincipal);
-        user.TwoFactorEnabled = true;
-
-        var result = await userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            return TypedResults.BadRequest(result.Errors.Select(e => e.Description));
-        }
-
-        return TypedResults.NoContent();
-    }
-
-    private static async Task<IResult> GetMeAsync(UserManager<ApplicationUser> userManager, IMapper mapper, ClaimsPrincipal claimsPrincipal)
-    {
-        var dbUser = await userManager.GetUserAsync(claimsPrincipal);
-        var user = mapper.Map<User>(dbUser);
-
-        return TypedResults.Ok(user);
     }
 
     private static async Task<IResult> LoginAsync(SignInManager<ApplicationUser> signInManager, ITimeLimitedDataProtector dataProtector, IJwtBearerService jwtBearerService, LoginRequest request)
@@ -160,10 +102,9 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.SerialNumber, user.SecurityStamp)
         }
-        .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)))
-        .ToList();
+        .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims);
+        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims.ToList());
         return TypedResults.Ok(new AuthResponse(accessToken));
     }
 
@@ -198,32 +139,26 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
         return TypedResults.File(qrCodeBytes, MediaTypeNames.Image.Png);
     }
 
-    private static async Task<IResult> RegisterAsync(UserManager<ApplicationUser> userManager, IFluentEmail fluentEmail, LinkGenerator linkGenerator, HttpContext httpContext, RegisterRequest request)
+    private static async Task<IResult> RegisterAsync(UserManager<ApplicationUser> userManager, IMapper mapper, IFluentEmail fluentEmail, LinkGenerator linkGenerator, HttpContext httpContext, RegisterRequest request)
     {
-        var user = new ApplicationUser
-        {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email,
-            UserName = request.Email,
-            PhoneNumber = request.PhoneNumber,
-            TwoFactorEnabled = request.TwoFactorEnabled
-        };
-
+        var user = mapper.Map<ApplicationUser>(request);
         var result = await userManager.CreateAsync(user, request.Password);
+
         if (!result.Succeeded)
         {
             return TypedResults.BadRequest(result.Errors.Select(e => e.Description));
         }
 
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        var scheme = httpContext.Request.Scheme;
+
         var values = new RouteValueDictionary
         {
             ["userId"] = user.Id,
             ["token"] = token
         };
 
-        var endpoint = linkGenerator.GetUriByRouteValues(httpContext, "verifyemail", values, httpContext.Request.Scheme);
+        var endpoint = linkGenerator.GetUriByRouteValues(httpContext, "verifyemail", values, scheme);
         var sendResult = await fluentEmail.To(user.Email).Subject("Confirm your email")
             .Body($"Please confirm your email by clicking this link: <a href='{endpoint}'>Confirm Email</a>", true)
             .SendAsync();
@@ -234,35 +169,6 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
         }
 
         return TypedResults.Created();
-    }
-
-    private static async Task<IResult> ResetPasswordAsync(UserManager<ApplicationUser> userManager, ResetPasswordRequest request)
-    {
-        var user = await userManager.FindByEmailAsync(request.Email);
-        if (user is null)
-        {
-            return TypedResults.BadRequest("Invalid email address");
-        }
-
-        var token = await userManager.GeneratePasswordResetTokenAsync(user);
-        return TypedResults.Ok(new ResetPasswordResponse(token));
-    }
-
-    private static async Task<IResult> UpdatePasswordAsync(UserManager<ApplicationUser> userManager, ChangePasswordRequest request)
-    {
-        var user = await userManager.FindByEmailAsync(request.Email);
-        if (user is null)
-        {
-            return TypedResults.BadRequest("Invalid email address");
-        }
-
-        var result = await userManager.ResetPasswordAsync(user, request.Token, request.Password);
-        if (!result.Succeeded)
-        {
-            return TypedResults.BadRequest(result.Errors.Select(e => e.Description));
-        }
-
-        return TypedResults.NoContent();
     }
 
     private static async Task<IResult> ValidateAsync(UserManager<ApplicationUser> userManager, ITimeLimitedDataProtector dataProtector, IJwtBearerService jwtBearerService, TwoFactorValidationRequest request)
@@ -303,10 +209,9 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.SerialNumber, user.SecurityStamp)
         }
-        .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)))
-        .ToList();
+        .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims);
+        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims.ToList());
         return TypedResults.Ok(new AuthResponse(accessToken));
     }
 

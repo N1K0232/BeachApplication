@@ -15,39 +15,43 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
         var orderApiGroup = endpoints.MapGroup("/api/orders");
 
         orderApiGroup.MapPost("save", SaveAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .WithValidation<SaveOrderRequest>()
             .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
+            .WithName("SaveOrder")
             .WithOpenApi();
 
         orderApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("DeleteOrder")
             .WithOpenApi();
 
         orderApiGroup.MapGet("{id:guid}", GetAsync)
             .WithName("GetOrder")
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("GetOrder")
             .WithOpenApi();
 
         orderApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<PaginatedList<Order>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
+            .WithName("GetOrders")
             .WithOpenApi();
     }
 

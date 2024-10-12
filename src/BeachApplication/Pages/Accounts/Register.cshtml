@@ -16,6 +16,9 @@
                 <input type="text" x-model="lastName" placeholder="Enter your last name" />
             </div>
             <div class="col-auto mt-2 input-box">
+                <input type="text" x-model="phoneNumber" placeholder="Enter your phone number" />
+            </div>
+            <div class="col-auto mt-2 input-box">
                 <input type="email" x-model="email" placeholder="Enter your email" />
             </div>
             <div class="col-auto mt-2 input-box">
@@ -25,6 +28,9 @@
             <div class="col-auto mt-2 input-box">
                 <input type="password" x-model="confirmPassword" placeholder="Confirm password" />
                 <h6 class="h6" x-text="passwordErrorMessage" x-show="passwordErrorMessage.length != 0 && !isBusy"></h6>
+            </div>
+            <div class="col-auto mt-2">
+                <label><input type="checkbox" x-model="twoFactorEnabled" />Enable Two Factor Authentication</label>
             </div>
             <div class="col-auto mt-3">
                 <button class="btn" type="submit" x-on:click="register()" x-bind:disabled="invalidRegisterForm() || isBusy">Register</button>

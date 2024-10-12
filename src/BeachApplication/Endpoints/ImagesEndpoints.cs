@@ -1,5 +1,7 @@
 ﻿using System.Net.Mime;
 using BeachApplication.BusinessLayer.Services.Interfaces;
+using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.Shared.Models;
 using MinimalHelpers.Routing;
 using OperationResults;
@@ -14,28 +16,34 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
         var imagesApiGroup = endpoints.MapGroup("/api/images");
 
         imagesApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("DeleteImage")
             .WithOpenApi();
 
         imagesApiGroup.MapGet("{id:guid}", GetAsync)
-            .WithName("GetImage")
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<Image>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("GetImage")
             .WithOpenApi();
 
         imagesApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("UserActive")
+            .RequireAuthorization()
             .Produces<PaginatedList<Image>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
+            .WithName("GetImages")
             .WithOpenApi();
 
         imagesApiGroup.MapGet("{id:guid}/image", ReadAsync)
@@ -44,16 +52,22 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
+            .WithName("GetImageContent")
             .WithOpenApi();
 
         imagesApiGroup.MapPost(string.Empty, UploadAsync)
             .Accepts<IFormFile>(MediaTypeNames.Multipart.FormData)
-            .RequireAuthorization("Administrator")
+            .RequireAuthorization(policy =>
+            {
+                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+                policy.Requirements.Add(new UserActiveRequirement());
+            })
             .Produces<Image>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .DisableAntiforgery()
+            .WithName("UploadImage")
             .WithOpenApi();
     }
 

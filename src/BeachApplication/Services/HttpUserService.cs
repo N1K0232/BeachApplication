@@ -1,5 +1,6 @@
-﻿using BeachApplication.Contracts;
-using BeachApplication.DataAccessLayer.Extensions;
+﻿using System.Security.Claims;
+using BeachApplication.Contracts;
+using SimpleAuthentication;
 
 namespace BeachApplication.Services;
 
@@ -7,13 +8,18 @@ public class HttpUserService(IHttpContextAccessor httpContextAccessor) : IUserSe
 {
     public Task<Guid> GetIdAsync()
     {
-        var userId = httpContextAccessor.HttpContext?.User.GetId();
-        return Task.FromResult(userId ?? Guid.Empty);
+        var value = httpContextAccessor.HttpContext.User.GetClaimValue(ClaimTypes.NameIdentifier);
+        if (Guid.TryParse(value, out var userId))
+        {
+            return Task.FromResult(userId);
+        }
+
+        return Task.FromResult(Guid.Empty);
     }
 
     public Task<string> GetUserNameAsync()
     {
-        var userName = httpContextAccessor.HttpContext?.User.GetUserName();
-        return Task.FromResult(userName ?? string.Empty);
+        var userName = httpContextAccessor.HttpContext.User.Identity.Name;
+        return Task.FromResult(userName);
     }
 }
