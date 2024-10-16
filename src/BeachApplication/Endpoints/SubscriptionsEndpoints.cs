@@ -1,6 +1,4 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.Routing;
@@ -16,11 +14,7 @@ public class SubscriptionsEndpoints : IEndpointRouteHandlerBuilder
         var subscriptionsApiGroup = endpoints.MapGroup("/api/subscriptions");
 
         subscriptionsApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization(policy =>
-            {
-                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
-                policy.Requirements.Add(new UserActiveRequirement());
-            })
+            .RequireAuthorization("admin", "poweruser", "user")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -28,7 +22,7 @@ public class SubscriptionsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         subscriptionsApiGroup.MapGet("{id:guid}", GetAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("admin", "poweruser", "user")
             .Produces<Subscription>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -37,14 +31,14 @@ public class SubscriptionsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         subscriptionsApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("admin", "poweruser", "user")
             .Produces<PaginatedList<Subscription>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
             .WithOpenApi();
 
         subscriptionsApiGroup.MapPost(string.Empty, InsertAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("user")
             .Produces<Subscription>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -52,7 +46,7 @@ public class SubscriptionsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         subscriptionsApiGroup.MapPut("{id:guid}", UpdateAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("user")
             .Produces<Subscription>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)

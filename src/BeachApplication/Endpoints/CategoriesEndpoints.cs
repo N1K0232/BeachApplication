@@ -1,6 +1,4 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using MinimalHelpers.FluentValidation;
@@ -13,14 +11,9 @@ public class CategoriesEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var categoriesApiGroup = endpoints.MapGroup("/api/categories");
+        var categoriesApiGroup = endpoints.MapGroup("/api/categories").RequireAuthorization();
 
         categoriesApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization(policy =>
-            {
-                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
-                policy.Requirements.Add(new UserActiveRequirement());
-            })
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -29,7 +22,6 @@ public class CategoriesEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         categoriesApiGroup.MapGet("{id:guid}", GetAsync)
-            .RequireAuthorization("UserActive")
             .WithName("GetCategory")
             .Produces<Category>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -38,19 +30,14 @@ public class CategoriesEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         categoriesApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("UserActive")
             .Produces<IEnumerable<Category>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
+            .RequireAuthorization()
             .WithOpenApi();
 
         categoriesApiGroup.MapPost(string.Empty, InsertAsync)
-            .RequireAuthorization(policy =>
-            {
-                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
-                policy.Requirements.Add(new UserActiveRequirement());
-            })
             .WithValidation<SaveCategoryRequest>()
             .Produces<Category>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -61,11 +48,6 @@ public class CategoriesEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         categoriesApiGroup.MapPut("{id:guid}", UpdateAsync)
-            .RequireAuthorization(policy =>
-            {
-                policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
-                policy.Requirements.Add(new UserActiveRequirement());
-            })
             .WithValidation<SaveCategoryRequest>()
             .Produces<Category>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)

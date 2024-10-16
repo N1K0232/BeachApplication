@@ -10,14 +10,13 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var meApiGroup = endpoints.MapGroup("/api/me");
+        var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization();
 
         meApiGroup.MapPost("/enable2fa", EnableTwoFactorAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
-            .RequireAuthorization()
             .WithName("enable2fa")
             .WithOpenApi();
 
@@ -25,7 +24,6 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
             .Produces<User>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
-            .RequireAuthorization()
             .WithName("profile")
             .WithOpenApi();
     }

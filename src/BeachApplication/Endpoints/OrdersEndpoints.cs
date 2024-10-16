@@ -15,7 +15,7 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
         var orderApiGroup = endpoints.MapGroup("/api/orders");
 
         orderApiGroup.MapPost("save", SaveAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("user")
             .WithValidation<SaveOrderRequest>()
             .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -25,7 +25,7 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         orderApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("user")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -36,7 +36,7 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
 
         orderApiGroup.MapGet("{id:guid}", GetAsync)
             .WithName("GetOrder")
-            .RequireAuthorization()
+            .RequireAuthorization("user")
             .Produces<Order>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -46,7 +46,7 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         orderApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization()
+            .RequireAuthorization("user")
             .Produces<PaginatedList<Order>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

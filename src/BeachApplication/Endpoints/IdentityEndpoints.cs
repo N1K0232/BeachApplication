@@ -2,11 +2,11 @@
 using System.Security.Claims;
 using AutoMapper;
 using BeachApplication.DataAccessLayer;
+using BeachApplication.DataAccessLayer.DataProtection;
 using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
 using FluentEmail.Core;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
@@ -20,20 +20,18 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var identityApiGroup = endpoints.MapGroup("/api/auth");
+        var identityApiGroup = endpoints.MapGroup("/api/auth").AllowAnonymous();
 
         identityApiGroup.MapPost("/login", LoginAsync)
             .WithValidation<LoginRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .AllowAnonymous()
             .WithName("login")
             .WithOpenApi();
 
         identityApiGroup.MapGet("/qrcode", GetQrCodeAsync)
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .AllowAnonymous()
             .WithName("qrcode")
             .WithOpenApi();
 
@@ -41,7 +39,6 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithValidation<RegisterRequest>()
             .Produces(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
-            .AllowAnonymous()
             .WithName("register")
             .WithOpenApi();
 
@@ -49,7 +46,6 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithValidation<TwoFactorValidationRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .AllowAnonymous()
             .WithName("validate2fa")
             .WithOpenApi();
 
@@ -57,12 +53,11 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
-            .AllowAnonymous()
             .WithName("verifyemail")
             .WithOpenApi();
     }
 
-    private static async Task<IResult> LoginAsync(SignInManager<ApplicationUser> signInManager, ITimeLimitedDataProtector dataProtector, IJwtBearerService jwtBearerService, LoginRequest request)
+    private static async Task<IResult> LoginAsync(SignInManager<ApplicationUser> signInManager, IDataProtectionService dataProtectionService, IJwtBearerService jwtBearerService, LoginRequest request)
     {
         var user = await signInManager.UserManager.FindByEmailAsync(request.Email);
         var result = await signInManager.PasswordSignInAsync(user, request.Password, request.IsPersistent, true);
@@ -83,7 +78,7 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
 
             if (result.RequiresTwoFactor)
             {
-                var token = dataProtector.Protect(user.Id.ToString(), TimeSpan.FromMinutes(15));
+                var token = await dataProtectionService.ProtectAsync(user.Id.ToString(), TimeSpan.FromMinutes(15));
                 return TypedResults.Ok(new AuthResponse(token));
             }
 
@@ -108,13 +103,13 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
         return TypedResults.Ok(new AuthResponse(accessToken));
     }
 
-    private static async Task<IResult> GetQrCodeAsync(UserManager<ApplicationUser> userManager, ITimeLimitedDataProtector dataProtector, IWebHostEnvironment environment, QRCodeGenerator qrCodeGenerator, string token)
+    private static async Task<IResult> GetQrCodeAsync(UserManager<ApplicationUser> userManager, IDataProtectionService dataProtectionService, IWebHostEnvironment environment, QRCodeGenerator qrCodeGenerator, string token)
     {
         ApplicationUser user = null;
 
         try
         {
-            var userId = dataProtector.Unprotect(token);
+            var userId = await dataProtectionService.UnprotectAsync(token);
             user = await userManager.FindByIdAsync(userId);
         }
         catch
@@ -171,13 +166,13 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
         return TypedResults.Created();
     }
 
-    private static async Task<IResult> ValidateAsync(UserManager<ApplicationUser> userManager, ITimeLimitedDataProtector dataProtector, IJwtBearerService jwtBearerService, TwoFactorValidationRequest request)
+    private static async Task<IResult> ValidateAsync(UserManager<ApplicationUser> userManager, IDataProtectionService dataProtectionService, IJwtBearerService jwtBearerService, TwoFactorValidationRequest request)
     {
         ApplicationUser user = null;
 
         try
         {
-            var userId = dataProtector.Unprotect(request.Token);
+            var userId = await dataProtectionService.UnprotectAsync(request.Token);
             user = await userManager.FindByIdAsync(userId);
         }
         catch
