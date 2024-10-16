@@ -107,8 +107,11 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     public override async ValueTask DisposeAsync()
     {
-        tokenSource.Dispose();
-        tokenSource = null;
+        if (tokenSource is not null)
+        {
+            tokenSource.Dispose();
+            tokenSource = null;
+        }
 
         if (transaction is not null)
         {
