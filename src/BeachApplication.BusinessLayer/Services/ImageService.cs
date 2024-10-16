@@ -39,6 +39,12 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
 
     public async Task<Result<Image>> GetAsync(Guid id)
     {
+        var cachedImage = await cache.GetAsync<Entities.Image>(id);
+        if (cachedImage is not null)
+        {
+            return mapper.Map<Image>(cachedImage);
+        }
+
         var dbImage = await db.GetAsync<Entities.Image>(id);
         if (dbImage is null)
         {
