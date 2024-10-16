@@ -13,6 +13,7 @@ using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Authorization;
+using BeachApplication.DataAccessLayer.DataProtection;
 using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Extensions;
@@ -78,6 +79,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
 builder.Services.AddDataProtection().SetApplicationName(appSettings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
 
+builder.Services.AddScoped<IDataProtectionService, DataProtectionService>();
 builder.Services.AddScoped(services =>
 {
     var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
@@ -141,6 +143,25 @@ if (swaggerSettings.Enabled)
         options.SetNotNullableIfMinLengthGreaterThenZero = true;
     });
 }
+
+builder.Services.AddHangfire(options =>
+{
+    var storageOptions = new SqlServerStorageOptions
+    {
+        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+        QueuePollInterval = TimeSpan.Zero,
+        UseRecommendedIsolationLevel = true,
+        DisableGlobalLocks = true
+    };
+
+    options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSqlServerStorage(connectionString, storageOptions);
+});
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddScoped(_ => new QRCodeGenerator());
 builder.Services.AddScoped<IQrCodeGeneratorService, QrCodeGeneratorService>();
@@ -214,26 +235,6 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
-
-builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
-builder.Services.AddHangfire(options =>
-{
-    var storageOptions = new SqlServerStorageOptions
-    {
-        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-        QueuePollInterval = TimeSpan.Zero,
-        UseRecommendedIsolationLevel = true,
-        DisableGlobalLocks = true
-    };
-
-    options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(connectionString, storageOptions);
-});
-
-builder.Services.AddHangfireServer();
 
 if (azureStorageConnectionString.HasValue())
 {
@@ -330,12 +331,11 @@ if (swaggerSettings.Enabled)
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseHangfireDashboard("/jobs");
 app.UseSerilogRequestLogging(options =>
 {
     options.IncludeQueryInRequestPath = true;
 });
-
-app.UseHangfireDashboard("/jobs");
 
 app.MapRazorPages();
 app.MapEndpoints();
