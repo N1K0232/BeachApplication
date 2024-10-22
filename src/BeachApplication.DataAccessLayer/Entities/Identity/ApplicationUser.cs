@@ -10,6 +10,8 @@ public class ApplicationUser : IdentityUser<Guid>
 
     public virtual ICollection<Cart> Carts { get; set; }
 
+    public virtual ICollection<Comment> Comments { get; set; }
+
     public virtual ICollection<Order> Orders { get; set; }
 
     public virtual ICollection<Reservation> Reservations { get; set; }
