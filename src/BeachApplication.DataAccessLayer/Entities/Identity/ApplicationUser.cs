@@ -12,6 +12,8 @@ public class ApplicationUser : IdentityUser<Guid>
 
     public virtual ICollection<Order> Orders { get; set; }
 
+    public virtual ICollection<Reservation> Reservations { get; set; }
+
     public virtual ICollection<Subscription> Subscriptions { get; set; }
 
     public virtual ICollection<ApplicationUserRole> UserRoles { get; set; }
