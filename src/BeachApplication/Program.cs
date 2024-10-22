@@ -4,12 +4,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using BeachApplication.BusinessLayer.BackgroundServices;
-using BeachApplication.BusinessLayer.Core;
 using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
+using BeachApplication.Clients;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Authorization;
@@ -144,6 +144,7 @@ if (swaggerSettings.Enabled)
     });
 }
 
+builder.Services.AddHangfireServer();
 builder.Services.AddHangfire(options =>
 {
     var storageOptions = new SqlServerStorageOptions
@@ -161,10 +162,12 @@ builder.Services.AddHangfire(options =>
         .UseSqlServerStorage(connectionString, storageOptions);
 });
 
-builder.Services.AddHangfireServer();
-
 builder.Services.AddScoped(_ => new QRCodeGenerator());
-builder.Services.AddScoped<IQrCodeGeneratorService, QrCodeGeneratorService>();
+builder.Services.AddChatServer(options =>
+{
+    options.Port = 587;
+    options.Backlog = 10;
+});
 
 builder.Services.AddResiliencePipeline("timeout", (builder, context) =>
 {
@@ -273,15 +276,8 @@ builder.Services.AddQuartzHostedService(options =>
 
 builder.Services.AddQuartz(options =>
 {
-    var ordersManagerBackgroundJobKey = nameof(OrdersManagerBackgroundJob);
-    options.AddJob<OrdersManagerBackgroundJob>(jobOptions => jobOptions.WithIdentity(ordersManagerBackgroundJobKey));
-
-    options.AddTrigger(triggerOptions =>
-    {
-        triggerOptions.ForJob(ordersManagerBackgroundJobKey)
-            .WithIdentity($"{ordersManagerBackgroundJobKey}-trigger")
-            .WithCronSchedule("0 0 0 * * ?");
-    });
+    options.AddScheduledJob<OrdersManagerBackgroundJob>("0 0 0 * * ?");
+    options.AddScheduledJob<ProductsManagerBackgroundJob>("0 30 0 ? * * *");
 });
 
 builder.Services.AddQuartzServer();
