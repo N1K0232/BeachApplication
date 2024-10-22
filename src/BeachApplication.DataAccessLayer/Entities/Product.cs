@@ -16,5 +16,7 @@ public class Product : DeletableEntity
 
     public virtual Category Category { get; set; }
 
+    public virtual ICollection<CartItem> Items { get; set; }
+
     public virtual ICollection<OrderDetail> OrderDetails { get; set; }
 }

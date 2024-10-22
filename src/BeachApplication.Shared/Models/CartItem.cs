@@ -2,11 +2,11 @@
 
 namespace BeachApplication.Shared.Models;
 
-public class OrderDetail : BaseObject
+public class CartItem : BaseObject
 {
-    public int? Quantity { get; set; }
+    public int Quantity { get; set; }
 
     public decimal Price { get; set; }
 
-    public string? Notes { get; set; }
+    public Product Product { get; set; } = null!;
 }

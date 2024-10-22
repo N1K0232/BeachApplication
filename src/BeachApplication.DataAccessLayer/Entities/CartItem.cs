@@ -2,9 +2,9 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class OrderDetail : DeletableEntity
+public class CartItem : BaseEntity
 {
-    public Guid OrderId { get; set; }
+    public Guid CartId { get; set; }
 
     public Guid ProductId { get; set; }
 
@@ -14,7 +14,7 @@ public class OrderDetail : DeletableEntity
 
     public string Notes { get; set; }
 
-    public virtual Order Order { get; set; }
+    public virtual Cart Cart { get; set; }
 
     public virtual Product Product { get; set; }
 }

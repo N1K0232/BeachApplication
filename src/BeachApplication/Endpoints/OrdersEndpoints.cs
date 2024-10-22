@@ -1,7 +1,5 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models;
-using BeachApplication.Shared.Models.Requests;
-using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
 using OperationResults;
 using OperationResults.AspNetCore.Http;
@@ -14,17 +12,7 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
     {
         var orderApiGroup = endpoints.MapGroup("/api/orders");
 
-        orderApiGroup.MapPost("save", SaveAsync)
-            .RequireAuthorization("user")
-            .WithValidation<SaveOrderRequest>()
-            .Produces<Order>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .WithName("SaveOrder")
-            .WithOpenApi();
-
-        orderApiGroup.MapDelete("{id:guid}", DeleteAsync)
+        orderApiGroup.MapDelete("{id:guid}", CancelAsync)
             .RequireAuthorization("user")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
@@ -55,21 +43,15 @@ public class OrdersEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
     }
 
-    private static async Task<IResult> SaveAsync(IOrderService orderService, SaveOrderRequest request, HttpContext httpContext)
+    private static async Task<IResult> CancelAsync(IOrderService orderService, Guid id, HttpContext httpContext)
     {
-        var result = await orderService.SaveAsync(request);
+        var result = await orderService.CancelAsync(id);
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> DeleteAsync(IOrderService orderService, Guid id, HttpContext httpContext)
+    private static async Task<IResult> GetAsync(IOrderService orderService, HttpContext httpContext)
     {
-        var result = await orderService.DeleteAsync(id);
-        return httpContext.CreateResponse(result);
-    }
-
-    private static async Task<IResult> GetAsync(IOrderService orderService, Guid id, HttpContext httpContext)
-    {
-        var result = await orderService.GetAsync(id);
+        var result = await orderService.GetAsync();
         return httpContext.CreateResponse(result);
     }
 

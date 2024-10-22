@@ -4,9 +4,9 @@ using FluentValidation;
 
 namespace BeachApplication.BusinessLayer.Validations;
 
-public class SaveOrderRequestValidator : AbstractValidator<SaveOrderRequest>
+public class SaveCartRequestValidator : AbstractValidator<SaveCartRequest>
 {
-    public SaveOrderRequestValidator()
+    public SaveCartRequestValidator()
     {
         RuleFor(o => o.ProductId)
             .NotEmpty()

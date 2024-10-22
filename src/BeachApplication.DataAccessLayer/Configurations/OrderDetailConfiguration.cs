@@ -17,7 +17,7 @@ internal class OrderDetailConfiguration : DeletableEntityConfiguration<OrderDeta
 
         builder.Property(o => o.Quantity).IsRequired();
         builder.Property(o => o.Price).HasPrecision(8, 2).IsRequired();
-        builder.Property(o => o.Annotations).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
+        builder.Property(o => o.Notes).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
 
         builder.ToTable("OrderDetails");
         base.Configure(builder);
