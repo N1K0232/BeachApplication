@@ -33,7 +33,7 @@ public class CommentService(IApplicationDbContext db, IUserService userService, 
 
         if (dbComment is null)
         {
-            return Result.Fail(FailureReasons.ItemNotFound, $"No comment found with id {id}");
+            return Result.Fail(FailureReasons.ItemNotFound, $"No comment found with id {userId}");
         }
 
         var comment = mapper.Map<Comment>(dbComment);
