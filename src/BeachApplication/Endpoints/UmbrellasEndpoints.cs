@@ -81,7 +81,7 @@ public class UmbrellasEndpoints : IEndpointRouteHandlerBuilder
     private static async Task<IResult> InsertAsync(IUmbrellaService umbrellaService, SaveUmbrellaRequest request, HttpContext httpContext)
     {
         var result = await umbrellaService.InsertAsync(request);
-        return httpContext.CreateResponse(result, "GetReservation", new { id = result.Content?.Id });
+        return httpContext.CreateResponse(result, "GetUmbrella", new { id = result.Content?.Id });
     }
 
     private static async Task<IResult> UpdateAsync(IUmbrellaService umbrellaService, Guid id, SaveUmbrellaRequest request, HttpContext httpContext)
