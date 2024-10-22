@@ -1,6 +1,7 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
+using MinimalHelpers.FluentValidation;
 using OperationResults;
 using OperationResults.AspNetCore.Http;
 
@@ -41,6 +42,7 @@ public class ReservationsEndpoints
 
         reservationApiGroup.MapPost(string.Empty, InsertAsync)
             .RequireAuthorization()
+            .WithValidation<SaveReservationRequest>()
             .Produces<Umbrella>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -50,6 +52,7 @@ public class ReservationsEndpoints
 
         reservationApiGroup.MapPut("{id:guid}", UpdateAsync)
             .RequireAuthorization()
+            .WithValidation<SaveReservationRequest>()
             .Produces<Umbrella>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

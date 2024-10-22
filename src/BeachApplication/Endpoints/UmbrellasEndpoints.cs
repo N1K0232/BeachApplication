@@ -1,6 +1,7 @@
 ﻿using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
+using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
 using OperationResults;
 using OperationResults.AspNetCore.Http;
@@ -42,6 +43,7 @@ public class UmbrellasEndpoints : IEndpointRouteHandlerBuilder
 
         umbrellasApiGroup.MapPost(string.Empty, InsertAsync)
             .RequireAuthorization()
+            .WithValidation<SaveUmbrellaRequest>()
             .Produces<Umbrella>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -51,6 +53,7 @@ public class UmbrellasEndpoints : IEndpointRouteHandlerBuilder
 
         umbrellasApiGroup.MapPut("{id:guid}", UpdateAsync)
             .RequireAuthorization()
+            .WithValidation<SaveUmbrellaRequest>()
             .Produces<Umbrella>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
