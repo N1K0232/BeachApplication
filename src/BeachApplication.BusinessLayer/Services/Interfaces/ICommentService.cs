@@ -8,8 +8,6 @@ public interface ICommentService
 {
     Task<Result> DeleteAsync(Guid id);
 
-    Task<Result<Comment>> GetAsync();
-
     Task<Result<Comment>> GetAsync(Guid id);
 
     Task<Result<PaginatedList<Comment>>> GetListAsync(int pageIndex, int itemsPerPage);

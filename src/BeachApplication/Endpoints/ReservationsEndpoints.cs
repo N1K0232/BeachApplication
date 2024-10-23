@@ -37,7 +37,7 @@ public class ReservationsEndpoints
             .Produces<PaginatedList<Reservation>>()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
-            .WithName("GetResevations")
+            .WithName("GetReservations")
             .WithOpenApi();
 
         reservationApiGroup.MapPost(string.Empty, InsertAsync)

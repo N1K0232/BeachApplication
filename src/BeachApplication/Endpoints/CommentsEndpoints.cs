@@ -12,9 +12,10 @@ public class CommentsEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var commentsApiGroup = endpoints.MapGroup("/api/comments").RequireAuthorization();
+        var commentsApiGroup = endpoints.MapGroup("/api/comments");
 
         commentsApiGroup.MapDelete("{id:guid}", DeleteAsync)
+            .RequireAuthorization()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -22,15 +23,8 @@ public class CommentsEndpoints : IEndpointRouteHandlerBuilder
             .WithName("DeleteComment")
             .WithOpenApi();
 
-        commentsApiGroup.MapGet(string.Empty, GetUserCommentAsync)
-            .Produces<Comment>()
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound)
-            .WithName("GetUserComment")
-            .WithOpenApi();
-
         commentsApiGroup.MapGet("{id:guid}", GetAsync)
+            .RequireAuthorization()
             .Produces<Comment>()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -39,6 +33,7 @@ public class CommentsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         commentsApiGroup.MapGet(string.Empty, GetListAsync)
+            .RequireAuthorization()
             .Produces<PaginatedList<Comment>>()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -46,6 +41,7 @@ public class CommentsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         commentsApiGroup.MapPost(string.Empty, InsertAsync)
+            .RequireAuthorization()
             .WithValidation<SaveCommentRequest>()
             .Produces<Comment>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -56,6 +52,7 @@ public class CommentsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         commentsApiGroup.MapPut("{id:guid}", UpdateAsync)
+            .RequireAuthorization()
             .WithValidation<SaveCommentRequest>()
             .Produces<Comment>()
             .Produces(StatusCodes.Status400BadRequest)
@@ -69,12 +66,6 @@ public class CommentsEndpoints : IEndpointRouteHandlerBuilder
     private static async Task<IResult> DeleteAsync(ICommentService commentService, Guid id, HttpContext httpContext)
     {
         var result = await commentService.DeleteAsync(id);
-        return httpContext.CreateResponse(result);
-    }
-
-    private static async Task<IResult> GetUserCommentAsync(ICommentService commentService, HttpContext httpContext)
-    {
-        var result = await commentService.GetAsync();
         return httpContext.CreateResponse(result);
     }
 

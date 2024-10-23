@@ -26,20 +26,6 @@ public class CommentService(IApplicationDbContext db, IUserService userService, 
         return Result.Ok();
     }
 
-    public async Task<Result<Comment>> GetAsync()
-    {
-        var userId = await userService.GetIdAsync();
-        var dbComment = await db.GetData<Entities.Comment>().FirstOrDefaultAsync(c => c.UserId == userId);
-
-        if (dbComment is null)
-        {
-            return Result.Fail(FailureReasons.ItemNotFound, $"No comment found with id {userId}");
-        }
-
-        var comment = mapper.Map<Comment>(dbComment);
-        return comment;
-    }
-
     public async Task<Result<Comment>> GetAsync(Guid id)
     {
         var dbComment = await db.GetAsync<Entities.Comment>(id);
