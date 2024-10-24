@@ -20,13 +20,7 @@ public class SwaggerBasicAuthenticationMiddleware(RequestDelegate next, IOptions
             string authenticationHeader = httpContext.Request.Headers[HeaderNames.Authorization];
             if (authenticationHeader?.StartsWith("Basic ") ?? false)
             {
-                var header = AuthenticationHeaderValue.Parse(authenticationHeader);
-                var parameter = Convert.FromBase64String(header.Parameter);
-                var credentials = Encoding.UTF8.GetString(parameter).Split(':', count: 2);
-
-                var userName = credentials.ElementAtOrDefault(0);
-                var password = credentials.ElementAtOrDefault(1);
-
+                var (userName, password) = GetCredentials(authenticationHeader);
                 if (userName == swaggerSettings.UserName && password == swaggerSettings.Password)
                 {
                     await next.Invoke(httpContext);
@@ -41,5 +35,14 @@ public class SwaggerBasicAuthenticationMiddleware(RequestDelegate next, IOptions
         {
             await next.Invoke(httpContext);
         }
+    }
+
+    private static (string UserName, string Password) GetCredentials(string authenticationHeader)
+    {
+        var header = AuthenticationHeaderValue.Parse(authenticationHeader);
+        var parameter = Convert.FromBase64String(header.Parameter);
+        var credentials = Encoding.UTF8.GetString(parameter).Split(':', count: 2);
+
+        return (credentials.ElementAtOrDefault(0), credentials.ElementAtOrDefault(1));
     }
 }

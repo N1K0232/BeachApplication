@@ -3,12 +3,16 @@
 namespace System.Reflection;
 
 [AttributeUsage(AttributeTargets.Assembly)]
-public class BuildDateTimeAttribute : Attribute
+public class BuildDateTimeAttribute(string value) : Attribute
 {
-    public DateTime DateTime { get; }
+    private const string Format = "yyyyMMddHHmmss";
+    private const DateTimeStyles Styles = DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal;
 
-    public BuildDateTimeAttribute(string value)
+    public DateTime DateTime
     {
-        DateTime = DateTime.ParseExact(value, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+        get
+        {
+            return DateTime.ParseExact(value, Format, CultureInfo.InvariantCulture, Styles);
+        }
     }
 }
