@@ -12,4 +12,4 @@
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Path]
-ON [dbo].[Images]([Id]);
+ON [dbo].[Images]([Path]);
