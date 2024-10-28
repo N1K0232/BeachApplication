@@ -1,18 +1,9 @@
-﻿using System.Net.Mime;
-using System.Security.Claims;
-using AutoMapper;
-using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.DataProtection;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+﻿using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
-using FluentEmail.Core;
-using Microsoft.AspNetCore.Identity;
 using MinimalHelpers.FluentValidation;
 using MinimalHelpers.Routing;
-using QRCoder;
-using SimpleAuthentication.JwtBearer;
-using TinyHelpers.Extensions;
+using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
 
@@ -57,170 +48,33 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
     }
 
-    private static async Task<IResult> LoginAsync(SignInManager<ApplicationUser> signInManager, IDataProtectionService dataProtectionService, IJwtBearerService jwtBearerService, LoginRequest request)
+    private static async Task<IResult> LoginAsync(IIdentityService identityService, LoginRequest request, HttpContext httpContext)
     {
-        var user = await signInManager.UserManager.FindByEmailAsync(request.Email);
-        var result = await signInManager.PasswordSignInAsync(user, request.Password, request.IsPersistent, true);
-
-        if (!result.Succeeded)
-        {
-            var isEmailConfirmed = await signInManager.UserManager.IsEmailConfirmedAsync(user);
-            if (!isEmailConfirmed)
-            {
-                return TypedResults.BadRequest("You have to verify your account first");
-            }
-
-            var isLockedOut = await signInManager.UserManager.IsLockedOutAsync(user);
-            if (isLockedOut)
-            {
-                return TypedResults.BadRequest("Your account is locked out");
-            }
-
-            if (result.RequiresTwoFactor)
-            {
-                var token = await dataProtectionService.ProtectAsync(user.Id.ToString(), TimeSpan.FromMinutes(15));
-                return TypedResults.Ok(new AuthResponse(token));
-            }
-
-            await signInManager.UserManager.AccessFailedAsync(user);
-            return TypedResults.BadRequest("Invalid username or password");
-        }
-
-        var userRoles = await signInManager.UserManager.GetRolesAsync(user);
-        await signInManager.UserManager.UpdateSecurityStampAsync(user);
-
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.GivenName, user.FirstName),
-            new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.SerialNumber, user.SecurityStamp)
-        }
-        .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims.ToList());
-        return TypedResults.Ok(new AuthResponse(accessToken));
+        var result = await identityService.LoginAsync(request);
+        return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetQrCodeAsync(UserManager<ApplicationUser> userManager, IDataProtectionService dataProtectionService, IWebHostEnvironment environment, QRCodeGenerator qrCodeGenerator, string token)
+    private static async Task<IResult> GetQrCodeAsync(IIdentityService identityService, string token, HttpContext httpContext)
     {
-        ApplicationUser user = null;
-
-        try
-        {
-            var userId = await dataProtectionService.UnprotectAsync(token);
-            user = await userManager.FindByIdAsync(userId);
-        }
-        catch
-        {
-            return TypedResults.BadRequest();
-        }
-
-        if (user is null || (await userManager.GetAuthenticatorKeyAsync(user)).HasValue())
-        {
-            return TypedResults.BadRequest();
-        }
-
-        await userManager.ResetAuthenticatorKeyAsync(user);
-        var secret = await userManager.GetAuthenticatorKeyAsync(user);
-
-        var qrCodeUri = $"otpauth://totp/{Uri.EscapeDataString(environment.ApplicationName)}:{user.Email}?secret={secret}&issuer={Uri.EscapeDataString(environment.ApplicationName)}";
-
-        using var qrCodeData = qrCodeGenerator.CreateQrCode(qrCodeUri, QRCodeGenerator.ECCLevel.Q);
-        using var qrCode = new PngByteQRCode(qrCodeData);
-
-        var qrCodeBytes = qrCode.GetGraphic(3);
-        return TypedResults.File(qrCodeBytes, MediaTypeNames.Image.Png);
+        var result = await identityService.GetQrCodeAsync(token);
+        return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> RegisterAsync(UserManager<ApplicationUser> userManager, IMapper mapper, IFluentEmail fluentEmail, LinkGenerator linkGenerator, HttpContext httpContext, RegisterRequest request)
+    private static async Task<IResult> RegisterAsync(IIdentityService identityService, RegisterRequest request, HttpContext httpContext)
     {
-        var user = mapper.Map<ApplicationUser>(request);
-        var result = await userManager.CreateAsync(user, request.Password);
-
-        if (!result.Succeeded)
-        {
-            return TypedResults.BadRequest(result.Errors.Select(e => e.Description));
-        }
-
-        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-        var scheme = httpContext.Request.Scheme;
-
-        var values = new RouteValueDictionary
-        {
-            ["userId"] = user.Id,
-            ["token"] = token
-        };
-
-        var endpoint = linkGenerator.GetUriByRouteValues(httpContext, "verifyemail", values, scheme);
-        var sendResult = await fluentEmail.To(user.Email).Subject("Confirm your email")
-            .Body($"Please confirm your email by clicking this link: <a href='{endpoint}'>Confirm Email</a>", true)
-            .SendAsync();
-
-        if (!sendResult.Successful)
-        {
-            return TypedResults.BadRequest(sendResult.ErrorMessages);
-        }
-
-        return TypedResults.Created();
+        var result = await identityService.RegisterAsync(request);
+        return httpContext.CreateResponse(result, StatusCodes.Status201Created);
     }
 
-    private static async Task<IResult> ValidateAsync(UserManager<ApplicationUser> userManager, IDataProtectionService dataProtectionService, IJwtBearerService jwtBearerService, TwoFactorValidationRequest request)
+    private static async Task<IResult> ValidateAsync(IIdentityService identityService, TwoFactorValidationRequest request, HttpContext httpContext)
     {
-        ApplicationUser user = null;
-
-        try
-        {
-            var userId = await dataProtectionService.UnprotectAsync(request.Token);
-            user = await userManager.FindByIdAsync(userId);
-        }
-        catch
-        {
-            return TypedResults.BadRequest();
-        }
-
-        if (user is null)
-        {
-            return TypedResults.BadRequest();
-        }
-
-        var tokenProvider = userManager.Options.Tokens.AuthenticatorTokenProvider;
-        var isValidTotpCode = await userManager.VerifyTwoFactorTokenAsync(user, tokenProvider, request.Code);
-
-        if (!isValidTotpCode)
-        {
-            return TypedResults.BadRequest();
-        }
-
-        var userRoles = await userManager.GetRolesAsync(user);
-        await userManager.UpdateSecurityStampAsync(user);
-
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.GivenName, user.FirstName),
-            new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.SerialNumber, user.SecurityStamp)
-        }
-        .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims.ToList());
-        return TypedResults.Ok(new AuthResponse(accessToken));
+        var result = await identityService.ValidateAsync(request);
+        return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> VerifyEmailAsync(UserManager<ApplicationUser> userManager, string userId, string token)
+    private static async Task<IResult> VerifyEmailAsync(IIdentityService identityService, string userId, string token, HttpContext httpContext)
     {
-        var user = await userManager.FindByIdAsync(userId);
-        var result = await userManager.ConfirmEmailAsync(user, token);
-
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(user, RoleNames.User);
-            return TypedResults.NoContent();
-        }
-
-        return TypedResults.BadRequest("Couldn't verify your email");
+        var result = await identityService.VerifyEmailAsync(userId, token);
+        return httpContext.CreateResponse(result);
     }
 }

@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models;
-using Microsoft.AspNetCore.Identity;
 using MinimalHelpers.Routing;
+using OperationResults.AspNetCore.Http;
 
 namespace BeachApplication.Endpoints;
 
@@ -28,31 +28,15 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
     }
 
-    private static async Task<IResult> EnableTwoFactorAsync(UserManager<ApplicationUser> userManager, ClaimsPrincipal claimsPrincipal)
+    private static async Task<IResult> EnableTwoFactorAsync(IMeService meService, ClaimsPrincipal principal, HttpContext httpContext)
     {
-        var user = await userManager.GetUserAsync(claimsPrincipal);
-        user.TwoFactorEnabled = true;
-
-        var result = await userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            return TypedResults.BadRequest(result.Errors.Select(e => e.Description));
-        }
-
-        return TypedResults.NoContent();
+        var result = await meService.EnableTwoFactorAsync(principal);
+        return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetProfileAsync(UserManager<ApplicationUser> userManager, ClaimsPrincipal claimsPrincipal)
+    private static async Task<IResult> GetProfileAsync(IMeService meService, ClaimsPrincipal principal, HttpContext httpContext)
     {
-        var dbUser = await userManager.GetUserAsync(claimsPrincipal);
-        var user = new User
-        {
-            Id = dbUser.Id,
-            FirstName = dbUser.FirstName,
-            LastName = dbUser.LastName,
-            Email = dbUser.Email
-        };
-
-        return TypedResults.Ok(user);
+        var result = await meService.GetAsync(principal);
+        return httpContext.CreateResponse(result);
     }
 }
