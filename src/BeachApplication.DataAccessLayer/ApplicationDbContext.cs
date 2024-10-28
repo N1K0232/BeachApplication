@@ -126,6 +126,8 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseExceptionProcessor();
+        optionsBuilder.EnableDetailedErrors();
+
         base.OnConfiguring(optionsBuilder);
     }
 

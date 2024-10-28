@@ -1,5 +1,4 @@
-﻿using BeachApplication.DataAccessLayer.Configurations.Identity;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+﻿using BeachApplication.DataAccessLayer.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +13,25 @@ public class AuthenticationDbContext(DbContextOptions options)
     {
         base.OnModelCreating(builder);
 
-        builder.ApplyConfiguration(new ApplicationUserConfiguration());
-        builder.ApplyConfiguration(new ApplicationUserRoleConfiguration());
+        builder.Entity<ApplicationUser>(b =>
+        {
+            b.Property(user => user.FirstName).HasMaxLength(256).IsRequired();
+            b.Property(user => user.LastName).HasMaxLength(256).IsRequired(false);
+        });
+
+        builder.Entity<ApplicationUserRole>(b =>
+        {
+            b.HasKey(userRole => new { userRole.UserId, userRole.RoleId });
+
+            b.HasOne(userRole => userRole.User)
+                .WithMany(user => user.UserRoles)
+                .HasForeignKey(userRole => userRole.UserId)
+                .IsRequired();
+
+            b.HasOne(userRole => userRole.Role)
+                .WithMany(role => role.UserRoles)
+                .HasForeignKey(userRole => userRole.RoleId)
+                .IsRequired();
+        });
     }
 }
