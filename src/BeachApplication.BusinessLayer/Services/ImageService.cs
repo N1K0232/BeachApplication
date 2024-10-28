@@ -27,33 +27,18 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
         await db.SaveAsync();
 
         await storageProvider.DeleteAsync(image.Path);
-        var cacheExists = await cache.ExistsAsync(id);
-
-        if (cacheExists)
-        {
-            await cache.RemoveAsync(id);
-        }
-
         return Result.Ok();
     }
 
     public async Task<Result<Image>> GetAsync(Guid id)
     {
-        var cachedImage = await cache.GetAsync<Entities.Image>(id);
-        if (cachedImage is not null)
-        {
-            return mapper.Map<Image>(cachedImage);
-        }
-
-        var dbImage = await db.GetAsync<Entities.Image>(id);
+        var dbImage = await db.GetData<Entities.Image>().FirstOrDefaultAsync(i => i.Id == id);
         if (dbImage is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
         }
 
         var image = mapper.Map<Image>(dbImage);
-        await cache.RefreshAsync(id);
-
         return image;
     }
 
@@ -83,7 +68,7 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
         return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
     }
 
-    public async Task<Result<Image>> UploadAsync(string fileName, Stream stream)
+    public async Task<Result<Image>> UploadAsync(Stream stream, string fileName)
     {
         var path = PathGenerator.CreatePath(fileName);
         await storageProvider.SaveAsync(stream, path);
@@ -98,7 +83,6 @@ public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStor
         await db.InsertAsync(image);
         await db.SaveAsync();
 
-        await cache.SetAsync(image);
         return mapper.Map<Image>(image);
     }
 }
