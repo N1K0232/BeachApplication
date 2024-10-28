@@ -2,7 +2,6 @@
 using AutoMapper;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ProductService(IApplicationDbContext db, ISqlClientCache cache, IMapper mapper) : IProductService
+public class ProductService(IApplicationDbContext db, IMapper mapper) : IProductService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
@@ -25,23 +24,11 @@ public class ProductService(IApplicationDbContext db, ISqlClientCache cache, IMa
         await db.DeleteAsync(dbProduct);
         await db.SaveAsync();
 
-        var cacheExists = await cache.ExistsAsync(id);
-        if (cacheExists)
-        {
-            await cache.RemoveAsync(id);
-        }
-
         return Result.Ok();
     }
 
     public async Task<Result<Product>> GetAsync(Guid id)
     {
-        var cachedProduct = await cache.GetAsync<Entities.Product>(id);
-        if (cachedProduct is not null)
-        {
-            return mapper.Map<Product>(cachedProduct);
-        }
-
         var query = db.GetData<Entities.Product>().Include(p => p.Category).AsQueryable();
         var dbProduct = await query.FirstOrDefaultAsync(p => p.Id == id);
 
@@ -51,8 +38,6 @@ public class ProductService(IApplicationDbContext db, ISqlClientCache cache, IMa
         }
 
         var product = mapper.Map<Product>(dbProduct);
-        await cache.RefreshAsync(id);
-
         return product;
     }
 
@@ -99,7 +84,6 @@ public class ProductService(IApplicationDbContext db, ISqlClientCache cache, IMa
         await db.InsertAsync(dbProduct);
         await db.SaveAsync();
 
-        await cache.SetAsync(dbProduct);
         return mapper.Map<Product>(dbProduct);
     }
 
@@ -129,8 +113,6 @@ public class ProductService(IApplicationDbContext db, ISqlClientCache cache, IMa
         dbProduct.CategoryId = category.Id;
 
         await db.SaveAsync();
-        await cache.UpdateAsync(dbProduct);
-
         return mapper.Map<Product>(dbProduct);
     }
 

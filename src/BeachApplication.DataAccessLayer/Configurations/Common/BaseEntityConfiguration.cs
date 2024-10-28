@@ -12,6 +12,6 @@ internal abstract class BaseEntityConfiguration<T> : IEntityTypeConfiguration<T>
         builder.Property(x => x.Id).ValueGeneratedOnAdd().HasDefaultValueSql("newid()");
 
         builder.Property(x => x.CreatedAt).ValueGeneratedOnAdd().HasDefaultValueSql("getutcdate()");
-        builder.Property(x => x.LastModifiedAt).IsRequired().ValueGeneratedOnUpdate();
+        builder.Property(x => x.LastModifiedAt).IsRequired(false).ValueGeneratedOnUpdate();
     }
 }

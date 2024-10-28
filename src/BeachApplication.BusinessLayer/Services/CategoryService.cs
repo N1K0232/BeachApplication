@@ -3,7 +3,6 @@ using AutoMapper.QueryableExtensions;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IMapper mapper) : ICategoryService
+public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICategoryService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
@@ -26,23 +25,11 @@ public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IM
         await db.DeleteAsync(dbCategory);
         await db.SaveAsync();
 
-        var cacheExists = await cache.ExistsAsync(id);
-        if (cacheExists)
-        {
-            await cache.RemoveAsync(id);
-        }
-
         return Result.Ok();
     }
 
     public async Task<Result<Category>> GetAsync(Guid id)
     {
-        var cachedCategory = await cache.GetAsync<Entities.Category>(id);
-        if (cachedCategory is not null)
-        {
-            return mapper.Map<Category>(cachedCategory);
-        }
-
         var dbCategory = await db.GetAsync<Entities.Category>(id);
         if (dbCategory is null)
         {
@@ -50,8 +37,6 @@ public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IM
         }
 
         var category = mapper.Map<Category>(dbCategory);
-        await cache.RefreshAsync(id);
-
         return category;
     }
 
@@ -84,7 +69,6 @@ public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IM
         var dbCategory = mapper.Map<Entities.Category>(request);
         await db.InsertAsync(dbCategory);
 
-        await cache.SetAsync(dbCategory);
         return mapper.Map<Category>(dbCategory);
     }
 
@@ -99,7 +83,6 @@ public class CategoryService(IApplicationDbContext db, ISqlClientCache cache, IM
         mapper.Map(request, dbCategory);
         await db.SaveAsync();
 
-        await cache.UpdateAsync(dbCategory);
         return mapper.Map<Category>(dbCategory);
     }
 }

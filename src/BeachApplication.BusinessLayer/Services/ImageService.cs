@@ -3,7 +3,6 @@ using BeachApplication.BusinessLayer.Internal;
 using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.StorageProviders;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ImageService(IApplicationDbContext db, ISqlClientCache cache, IStorageProvider storageProvider, IMapper mapper) : IImageService
+public class ImageService(IApplicationDbContext db, IStorageProvider storageProvider, IMapper mapper) : IImageService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

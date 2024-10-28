@@ -15,7 +15,6 @@ using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Authorization;
 using BeachApplication.DataAccessLayer.DataProtection;
 using BeachApplication.DataAccessLayer.Entities.Identity;
-using BeachApplication.DataAccessLayer.Extensions;
 using BeachApplication.Extensions;
 using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
@@ -163,6 +162,8 @@ builder.Services.AddHangfire(options =>
 });
 
 builder.Services.AddScoped(_ => new QRCodeGenerator());
+builder.Services.AddScoped<IQRCodeGeneratorService, QRCodeGeneratorService>();
+
 builder.Services.AddChatServer(options =>
 {
     options.Port = 587;
@@ -223,8 +224,8 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
 builder.Services.AddFluentEmail(emailSettings.EmailAddress).WithSendinblue();
 builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
 
-builder.Services.AddSqlServerCaching(connectionString);
-builder.Services.AddSqlServerContext(connectionString);
+builder.Services.AddSqlServer<ApplicationDbContext>(connectionString, options => options.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null));
+builder.Services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
@@ -255,8 +256,8 @@ else
     });
 }
 
-builder.Services.Scan(scan => scan.FromAssemblyOf<OrderService>()
-    .AddClasses(classes => classes.InNamespaceOf<OrderService>())
+builder.Services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
+    .AddClasses(classes => classes.InNamespaceOf<IdentityService>())
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 

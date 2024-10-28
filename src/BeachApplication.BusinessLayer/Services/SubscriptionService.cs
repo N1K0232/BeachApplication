@@ -3,7 +3,6 @@ using BeachApplication.BusinessLayer.Resources;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Caching;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class SubscriptionService(IApplicationDbContext db, ISqlClientCache cache, IUserService userService, IMapper mapper) : ISubscriptionService
+public class SubscriptionService(IApplicationDbContext db, IUserService userService, IMapper mapper) : ISubscriptionService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
@@ -26,18 +25,11 @@ public class SubscriptionService(IApplicationDbContext db, ISqlClientCache cache
         await db.DeleteAsync(dbSubscription);
         await db.SaveAsync();
 
-        await cache.RemoveAsync(id);
         return Result.Ok();
     }
 
     public async Task<Result<Subscription>> GetAsync(Guid id)
     {
-        var cachedSubscription = await cache.GetAsync<Entities.Subscription>(id);
-        if (cachedSubscription is not null)
-        {
-            return mapper.Map<Subscription>(cachedSubscription);
-        }
-
         var dbSubscription = await db.GetAsync<Entities.Subscription>(id);
         if (dbSubscription is null)
         {
@@ -72,7 +64,6 @@ public class SubscriptionService(IApplicationDbContext db, ISqlClientCache cache
         await db.InsertAsync(dbSubscription);
         await db.SaveAsync();
 
-        await cache.SetAsync(dbSubscription);
         return mapper.Map<Subscription>(dbSubscription);
     }
 
