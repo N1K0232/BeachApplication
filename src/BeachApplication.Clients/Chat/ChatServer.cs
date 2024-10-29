@@ -1,9 +1,10 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using BeachApplication.Clients.Settings;
 using Microsoft.Extensions.Logging;
 
-namespace BeachApplication.Clients;
+namespace BeachApplication.Clients.Chat;
 
 public class ChatServer : IChatServer
 {

@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 
-namespace BeachApplication.Clients;
+namespace BeachApplication.Clients.Chat;
 
 public interface IChatServer : IDisposable
 {

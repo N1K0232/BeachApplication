@@ -9,7 +9,7 @@ using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
-using BeachApplication.Clients;
+using BeachApplication.Clients.Extensions;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.DataAccessLayer.Authorization;
@@ -28,7 +28,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
@@ -59,9 +58,8 @@ builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
     loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration);
 });
 
-var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
-var emailSettings = builder.Services.ConfigureAndGet<SendinblueSettings>(builder.Configuration, nameof(SendinblueSettings));
-var swaggerSettings = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
+var settings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
+var swagger = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
 
 var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
 var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
@@ -72,17 +70,17 @@ builder.Services.AddRouting();
 builder.Services.AddDefaultExceptionHandler();
 builder.Services.AddDefaultProblemDetails();
 
-builder.Services.AddRequestLocalization(appSettings.SupportedCultures);
+builder.Services.AddRequestLocalization(settings.SupportedCultures);
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
-builder.Services.AddDataProtection().SetApplicationName(appSettings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
+builder.Services.AddDataProtection().SetApplicationName(settings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
 
 builder.Services.AddScoped<IDataProtectionService, DataProtectionService>();
 builder.Services.AddScoped(services =>
 {
     var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
-    var dataProtector = dataProtectionProvider.CreateProtector(appSettings.ApplicationName);
+    var dataProtector = dataProtectionProvider.CreateProtector(settings.ApplicationName);
 
     return dataProtector.ToTimeLimitedDataProtector();
 });
@@ -97,13 +95,27 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddFixedWindowLimiter("beachapplication", options =>
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
     {
-        options.PermitLimit = 5;
-        options.Window = TimeSpan.FromSeconds(30);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 2;
+        return RateLimitPartition.GetTokenBucketLimiter("Default", _ => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = 500,
+            TokensPerPeriod = 50,
+            ReplenishmentPeriod = TimeSpan.FromHours(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        });
     });
+
+    options.OnRejected = (context, token) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var window))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = window.TotalSeconds.ToString();
+        }
+
+        return ValueTask.CompletedTask;
+    };
 });
 
 builder.Services.AddAutoMapper(typeof(ImageMapperProfile).Assembly);
@@ -126,12 +138,12 @@ builder.Services.ConfigureValidation(options =>
 
 builder.Services.AddSimpleAuthentication(builder.Configuration);
 
-if (swaggerSettings.Enabled)
+if (swagger.Enabled)
 {
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
-        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Beach App Api", Version = "v1" });
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Beach Api", Version = "v1" });
         options.AddSimpleAuthentication(builder.Configuration);
 
         options.AddDefaultResponse();
@@ -164,11 +176,9 @@ builder.Services.AddHangfire(options =>
 builder.Services.AddScoped(_ => new QRCodeGenerator());
 builder.Services.AddScoped<IQRCodeGeneratorService, QRCodeGeneratorService>();
 
-builder.Services.AddChatServer(options =>
-{
-    options.Port = 587;
-    options.Backlog = 10;
-});
+builder.Services.AddChatServer(builder.Configuration);
+builder.Services.AddEmailSender(builder.Configuration);
+builder.Services.AddMessageSender(builder.Configuration);
 
 builder.Services.AddResiliencePipeline("timeout", (builder, context) =>
 {
@@ -221,11 +231,16 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
     });
 });
 
-builder.Services.AddFluentEmail(emailSettings.EmailAddress).WithSendinblue();
 builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
 
-builder.Services.AddSqlServer<ApplicationDbContext>(connectionString, options => options.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null));
-builder.Services.AddScoped<IApplicationDbContext>(services => services.GetRequiredService<ApplicationDbContext>());
+builder.Services.AddDbContext<IApplicationDbContext, ApplicationDbContext>(options =>
+{
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null);
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
+});
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
@@ -245,14 +260,14 @@ if (azureStorageConnectionString.HasValue())
     builder.Services.AddAzureStorage(options =>
     {
         options.ConnectionString = azureStorageConnectionString;
-        options.ContainerName = appSettings.StorageFolder;
+        options.ContainerName = settings.StorageFolder;
     });
 }
 else
 {
     builder.Services.AddFileSystemStorage(options =>
     {
-        options.StorageFolder = appSettings.StorageFolder;
+        options.StorageFolder = settings.StorageFolder;
     });
 }
 
@@ -284,7 +299,7 @@ builder.Services.AddQuartz(options =>
 builder.Services.AddQuartzServer();
 
 var app = builder.Build();
-app.Environment.ApplicationName = appSettings.ApplicationName;
+app.Environment.ApplicationName = settings.ApplicationName;
 
 app.UseHttpsRedirection();
 app.UseRequestLocalization();
@@ -313,14 +328,14 @@ app.UseWhen(context => context.IsApiRequest(), builder =>
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-if (swaggerSettings.Enabled)
+if (swagger.Enabled)
 {
     app.UseMiddleware<SwaggerBasicAuthenticationMiddleware>();
 
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Beach App Api v1");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Beach Api v1");
         options.InjectStylesheet("/css/swagger.css");
     });
 }

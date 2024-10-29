@@ -1,20 +1,18 @@
-﻿using BeachApplication.BusinessLayer.Settings;
+﻿using BeachApplication.Clients.Settings;
 using FluentEmail.Core;
 using FluentEmail.Core.Interfaces;
 using FluentEmail.Core.Models;
-using Microsoft.Extensions.Options;
 using sib_api_v3_sdk.Api;
 using sib_api_v3_sdk.Client;
 using sib_api_v3_sdk.Model;
-using TinyHelpers.Extensions;
 
-namespace BeachApplication.BusinessLayer.Email;
+namespace BeachApplication.Clients.Email;
 
-public class SendinblueSender : ISender
+public class EmailSender : ISender
 {
-    public SendinblueSender(IOptions<SendinblueSettings> sendinblueSettingsOptions)
+    public EmailSender(EmailSettings emailSettings)
     {
-        Configuration.Default.ApiKey.TryAdd("api-key", sendinblueSettingsOptions.Value.ApiKey);
+        Configuration.Default.ApiKey.TryAdd("email-api-key", emailSettings.ApiKey);
     }
 
     public SendResponse Send(IFluentEmail email, CancellationToken? token = null)
@@ -43,7 +41,7 @@ public class SendinblueSender : ISender
     private static async Task<SendSmtpEmail> CreateSmtpEmailAsync(IFluentEmail message)
     {
         var content = message.Data;
-        var userName = content.FromAddress.Name.HasValue() ? content.FromAddress.Name : null;
+        var userName = !string.IsNullOrWhiteSpace(content.FromAddress.Name) ? content.FromAddress.Name : null;
         var sender = new SendSmtpEmailSender(userName, content.FromAddress.EmailAddress);
 
         var toAddressList = content.ToAddresses.Any() ? content.ToAddresses.Select(a => new SendSmtpEmailTo(a.EmailAddress, a.Name)).ToList() : null;

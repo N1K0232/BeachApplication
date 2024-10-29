@@ -1,4 +1,4 @@
-﻿namespace BeachApplication.Clients;
+﻿namespace BeachApplication.Clients.Settings;
 
 public class ChatSettings
 {

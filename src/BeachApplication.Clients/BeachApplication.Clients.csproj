@@ -6,8 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentEmail.MailKit" Version="3.0.2" />
+    <PackageReference Include="MessageBird" Version="4.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="sib_api_v3_sdk" Version="4.0.2" />
   </ItemGroup>
 
 </Project>
