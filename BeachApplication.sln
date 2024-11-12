@@ -26,7 +26,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Logging", 
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Database", "src\BeachApplication.Database\BeachApplication.Database.sqlproj", "{F1CE5243-C917-4737-AF8D-4D6D834B27CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.Authentication", "src\BeachApplication.Authentication\BeachApplication.Authentication.csproj", "{18C9BA86-4C80-430F-8D19-068BC7218D75}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Authentication", "src\BeachApplication.Authentication\BeachApplication.Authentication.csproj", "{18C9BA86-4C80-430F-8D19-068BC7218D75}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
