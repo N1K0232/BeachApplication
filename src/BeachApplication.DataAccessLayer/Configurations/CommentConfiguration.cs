@@ -12,10 +12,7 @@ internal class CommentConfiguration : BaseEntityConfiguration<Comment>
         builder.Property(c => c.Title).HasMaxLength(150).IsRequired();
         builder.Property(c => c.Text).HasColumnType("NVARCHAR(MAX)").IsRequired();
 
-        builder.HasOne(c => c.User)
-            .WithMany(u => u.Comments)
-            .HasForeignKey(c => c.UserId)
-            .IsRequired();
+        builder.Property(c => c.UserId).IsRequired();
 
         builder.HasIndex(c => new { c.UserId, c.Title })
             .HasDatabaseName("IX_UserComment")

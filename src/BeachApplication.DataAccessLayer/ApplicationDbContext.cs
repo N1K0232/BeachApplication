@@ -1,14 +1,14 @@
 ﻿using System.Reflection;
+using BeachApplication.Authentication;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using EntityFramework.Exceptions.SqlServer;
-using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BeachApplication.DataAccessLayer;
 
-public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext, IDataProtectionKeyContext
+public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbContext
 {
     private static readonly MethodInfo setQueryFilterOnDeletableEntity = typeof(ApplicationDbContext)
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
@@ -17,11 +17,13 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
     private IDbContextTransaction transaction;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    public ApplicationDbContext()
     {
     }
 
-    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    {
+    }
 
     public Task DeleteAsync<T>(T entity) where T : BaseEntity
     {
@@ -133,17 +135,22 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.Entity<DataProtectionKey>(b =>
+        var assembly = Assembly.GetExecutingAssembly();
+        builder.ApplyConfigurationsFromAssembly(assembly);
+
+        var entities = builder.Model.GetEntityTypes()
+            .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)).ToList();
+
+        foreach (var type in entities.Select(t => t.ClrType))
         {
-            b.ToTable("DataProtectionKeys");
-            b.HasKey(k => k.Id);
-            b.Property(k => k.Id).UseIdentityColumn(1, 1);
+            var methods = SetGlobalQueryFiltersMethod(type);
+            foreach (var method in methods)
+            {
+                var genericMethod = method.MakeGenericMethod(type);
+                genericMethod.Invoke(this, [builder]);
+            }
+        }
 
-            b.Property(k => k.FriendlyName).HasMaxLength(256).IsRequired(false);
-            b.Property(k => k.Xml).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
-        });
-
-        OnModelCreatingInternal(builder);
         base.OnModelCreating(builder);
     }
 
@@ -162,25 +169,6 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     private void SetQueryFilterOnDeletableEntity<T>(ModelBuilder builder) where T : DeletableEntity
     {
         builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedAt == null);
-    }
-
-    private void OnModelCreatingInternal(ModelBuilder builder)
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        builder.ApplyConfigurationsFromAssembly(assembly);
-
-        var entities = builder.Model.GetEntityTypes()
-            .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)).ToList();
-
-        foreach (var type in entities.Select(t => t.ClrType))
-        {
-            var methods = SetGlobalQueryFiltersMethod(type);
-            foreach (var method in methods)
-            {
-                var genericMethod = method.MakeGenericMethod(type);
-                genericMethod.Invoke(this, [builder]);
-            }
-        }
     }
 
     private IEnumerable<EntityEntry> GetEntries(Type entityType)

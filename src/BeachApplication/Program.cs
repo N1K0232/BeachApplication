@@ -3,6 +3,11 @@ using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using BeachApplication.Authentication;
+using BeachApplication.Authentication.DataProtection;
+using BeachApplication.Authentication.Entities;
+using BeachApplication.Authentication.Extensions;
+using BeachApplication.Authorization;
 using BeachApplication.BusinessLayer.BackgroundServices;
 using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Services;
@@ -12,9 +17,6 @@ using BeachApplication.BusinessLayer.Validations;
 using BeachApplication.Clients.Extensions;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Authorization;
-using BeachApplication.DataAccessLayer.DataProtection;
-using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.Extensions;
 using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
@@ -42,7 +44,6 @@ using QRCoder;
 using Quartz;
 using Quartz.AspNetCore;
 using Serilog;
-using SimpleAuthentication;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
 using TinyHelpers.Extensions;
@@ -60,9 +61,6 @@ builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
 
 var settings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
 var swagger = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
-
-var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
-var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
 
 builder.Services.AddRazorPages();
 builder.Services.AddRouting();
@@ -98,13 +96,15 @@ builder.Services.AddRateLimiter(options =>
 
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
     {
-        return RateLimitPartition.GetTokenBucketLimiter("Default", _ => new TokenBucketRateLimiterOptions
+        var tokenOptions = new TokenBucketRateLimiterOptions
         {
             TokenLimit = 500,
             TokensPerPeriod = 50,
             ReplenishmentPeriod = TimeSpan.FromHours(1),
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-        });
+        };
+
+        return RateLimitPartition.GetTokenBucketLimiter("Default", _ => tokenOptions);
     });
 
     options.OnRejected = (context, token) =>
@@ -136,7 +136,27 @@ builder.Services.ConfigureValidation(options =>
     options.ErrorResponseFormat = ValidationErrorResponseFormat.List;
 });
 
-builder.Services.AddSimpleAuthentication(builder.Configuration);
+builder.Services.AddAuthentication(builder.Configuration);
+builder.Services.AddAuthorization(options =>
+{
+    var policyBuilder = new AuthorizationPolicyBuilder().RequireAuthenticatedUser();
+    policyBuilder.Requirements.Add(new UserActiveRequirement());
+
+    var policy = policyBuilder.Build();
+    options.DefaultPolicy = policy;
+
+    options.AddPolicy("UserActive", policy =>
+    {
+        policy.Requirements.Add(new UserActiveRequirement());
+        policy.RequireRole(RoleNames.User);
+    });
+
+    options.AddPolicy("Administrator", policy =>
+    {
+        policy.RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+        policy.Requirements.Add(new UserActiveRequirement());
+    });
+});
 
 if (swagger.Enabled)
 {
@@ -144,7 +164,7 @@ if (swagger.Enabled)
     builder.Services.AddSwaggerGen(options =>
     {
         options.SwaggerDoc("v1", new OpenApiInfo { Title = "Beach Api", Version = "v1" });
-        options.AddSimpleAuthentication(builder.Configuration);
+        options.AddAuthentication();
 
         options.AddDefaultResponse();
         options.AddAcceptLanguageHeader();
@@ -167,10 +187,12 @@ builder.Services.AddHangfire(options =>
         DisableGlobalLocks = true
     };
 
+    var hangfireConnectionString = builder.Configuration.GetConnectionString("HangfireConnection");
+
     options.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(connectionString, storageOptions);
+        .UseSqlServerStorage(hangfireConnectionString, storageOptions);
 });
 
 builder.Services.AddScoped(_ => new QRCodeGenerator());
@@ -232,9 +254,9 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
 });
 
 builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
-
 builder.Services.AddDbContext<IApplicationDbContext, ApplicationDbContext>(options =>
 {
+    var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
     options.UseSqlServer(connectionString, sqlOptions =>
     {
         sqlOptions.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null);
@@ -255,6 +277,7 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
 if (azureStorageConnectionString.HasValue())
 {
     builder.Services.AddAzureStorage(options =>

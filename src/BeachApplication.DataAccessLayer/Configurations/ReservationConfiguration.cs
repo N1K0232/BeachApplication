@@ -17,11 +17,7 @@ internal class ReservationConfiguration : DeletableEntityConfiguration<Reservati
 
         builder.Property(r => r.Notes).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
         builder.Property(r => r.TotalPrice).HasPrecision(8, 2).IsRequired(false);
-
-        builder.HasOne(r => r.User)
-            .WithMany(u => u.Reservations)
-            .HasForeignKey(r => r.UserId)
-            .IsRequired();
+        builder.Property(r => r.UserId).IsRequired();
 
         builder.HasOne(r => r.Umbrella)
             .WithMany(u => u.Reservations)

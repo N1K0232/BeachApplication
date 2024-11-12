@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 
-namespace BeachApplication.DataAccessLayer.DataProtection;
+namespace BeachApplication.Authentication.DataProtection;
 
 public class DataProtectionService(ITimeLimitedDataProtector protector) : IDataProtectionService
 {

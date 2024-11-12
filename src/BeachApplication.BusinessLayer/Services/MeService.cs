@@ -1,8 +1,9 @@
 ﻿using System.Security.Claims;
 using AutoMapper;
+using BeachApplication.Authentication.Entities;
 using BeachApplication.BusinessLayer.Services.Interfaces;
-using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.Shared.Models;
+using BeachApplication.Shared.Models.Requests;
 using Microsoft.AspNetCore.Identity;
 using OperationResults;
 
@@ -10,6 +11,12 @@ namespace BeachApplication.BusinessLayer.Services;
 
 public class MeService(UserManager<ApplicationUser> userManager, IMapper mapper) : IMeService
 {
+    public async Task<Result> ChangePhoneNumberAsync(ClaimsPrincipal principal, ChangePhoneNumberRequest request)
+    {
+        await Task.Delay(50);
+        return Result.Ok();
+    }
+
     public async Task<Result> EnableTwoFactorAsync(ClaimsPrincipal principal)
     {
         var user = await userManager.GetUserAsync(principal);

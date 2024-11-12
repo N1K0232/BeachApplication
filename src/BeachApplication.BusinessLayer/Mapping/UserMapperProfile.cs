@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+using BeachApplication.Authentication.Entities;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
 

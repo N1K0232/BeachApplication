@@ -1,9 +1,9 @@
 ﻿using System.Security.Claims;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+using BeachApplication.Authentication.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 
-namespace BeachApplication.DataAccessLayer.Authorization;
+namespace BeachApplication.Authorization;
 
 public class UserActiveHandler(UserManager<ApplicationUser> userManager) : AuthorizationHandler<UserActiveRequirement>
 {

@@ -1,5 +1,5 @@
-﻿using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.Entities.Identity;
+﻿using BeachApplication.Authentication;
+using BeachApplication.Authentication.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

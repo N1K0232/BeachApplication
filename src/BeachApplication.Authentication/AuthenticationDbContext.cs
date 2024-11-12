@@ -1,14 +1,25 @@
-﻿using BeachApplication.DataAccessLayer.Entities.Identity;
+﻿using BeachApplication.Authentication.Entities;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace BeachApplication.DataAccessLayer;
+namespace BeachApplication.Authentication;
 
-public class AuthenticationDbContext(DbContextOptions options)
-        : IdentityDbContext<ApplicationUser, ApplicationRole, Guid, IdentityUserClaim<Guid>, ApplicationUserRole,
-        IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>(options)
+public class AuthenticationDbContext
+    : IdentityDbContext<ApplicationUser, ApplicationRole, Guid, IdentityUserClaim<Guid>, ApplicationUserRole,
+      IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>, IDataProtectionKeyContext
 {
+    public AuthenticationDbContext()
+    {
+    }
+
+    public AuthenticationDbContext(DbContextOptions options) : base(options)
+    {
+    }
+
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -32,6 +43,16 @@ public class AuthenticationDbContext(DbContextOptions options)
                 .WithMany(role => role.UserRoles)
                 .HasForeignKey(userRole => userRole.RoleId)
                 .IsRequired();
+        });
+
+        builder.Entity<DataProtectionKey>(b =>
+        {
+            b.ToTable("DataProtectionKeys");
+            b.HasKey(k => k.Id);
+            b.Property(k => k.Id);
+
+            b.Property(k => k.FriendlyName).HasMaxLength(256).IsRequired(false);
+            b.Property(k => k.Xml).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
         });
     }
 }

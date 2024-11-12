@@ -1,11 +1,12 @@
 ﻿using System.Net.Mime;
 using System.Security.Claims;
 using AutoMapper;
+using BeachApplication.Authentication;
+using BeachApplication.Authentication.DataProtection;
+using BeachApplication.Authentication.Entities;
+using BeachApplication.Authentication.JwtBearer;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
-using BeachApplication.DataAccessLayer;
-using BeachApplication.DataAccessLayer.DataProtection;
-using BeachApplication.DataAccessLayer.Entities.Identity;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
 using FluentEmail.Core;
@@ -14,7 +15,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using OperationResults;
-using SimpleAuthentication.JwtBearer;
 using TinyHelpers.Extensions;
 
 namespace BeachApplication.BusinessLayer.Services;
@@ -130,8 +130,6 @@ public class IdentityService : IIdentityService
         return Result.Ok();
     }
 
-
-
     public async Task<Result<AuthResponse>> ValidateAsync(TwoFactorValidationRequest request)
     {
         ApplicationUser user;
@@ -192,6 +190,7 @@ public class IdentityService : IIdentityService
             new Claim(ClaimTypes.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName ?? string.Empty),
             new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.UserName),
             new Claim(ClaimTypes.SerialNumber, user.SecurityStamp)
         }
         .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));

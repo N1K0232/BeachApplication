@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace BeachApplication.DataAccessLayer.Entities.Identity;
+namespace BeachApplication.Authentication.Entities;
 
 public class ApplicationRole : IdentityRole<Guid>
 {

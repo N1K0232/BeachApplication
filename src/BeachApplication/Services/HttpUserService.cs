@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
+using BeachApplication.Authentication.Extensions;
 using BeachApplication.Contracts;
-using SimpleAuthentication;
 
 namespace BeachApplication.Services;
 

@@ -1,5 +1,5 @@
 ﻿
-namespace BeachApplication.DataAccessLayer.DataProtection;
+namespace BeachApplication.Authentication.DataProtection;
 
 public interface IDataProtectionService
 {

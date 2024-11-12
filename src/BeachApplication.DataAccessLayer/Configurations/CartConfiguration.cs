@@ -9,10 +9,7 @@ internal class CartConfiguration : BaseEntityConfiguration<Cart>
 {
     public override void Configure(EntityTypeBuilder<Cart> builder)
     {
-        builder.HasOne(c => c.User)
-            .WithMany(u => u.Carts)
-            .HasForeignKey(c => c.UserId)
-            .IsRequired();
+        builder.Property(c => c.UserId).IsRequired();
 
         builder.ToTable("Carts");
         base.Configure(builder);
