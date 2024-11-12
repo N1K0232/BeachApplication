@@ -10,7 +10,7 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization();
+        var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization("UserActive");
 
         meApiGroup.MapPost("/enable2fa", EnableTwoFactorAsync)
             .Produces(StatusCodes.Status204NoContent)
