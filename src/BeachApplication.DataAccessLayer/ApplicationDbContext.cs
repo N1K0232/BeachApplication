@@ -17,10 +17,6 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
     private IDbContextTransaction transaction;
 
-    public ApplicationDbContext()
-    {
-    }
-
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }

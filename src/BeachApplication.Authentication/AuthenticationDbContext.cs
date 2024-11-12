@@ -10,10 +10,6 @@ public class AuthenticationDbContext
     : IdentityDbContext<ApplicationUser, ApplicationRole, Guid, IdentityUserClaim<Guid>, ApplicationUserRole,
       IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>, IDataProtectionKeyContext
 {
-    public AuthenticationDbContext()
-    {
-    }
-
     public AuthenticationDbContext(DbContextOptions options) : base(options)
     {
     }
