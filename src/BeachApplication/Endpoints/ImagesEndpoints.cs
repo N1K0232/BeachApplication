@@ -4,6 +4,7 @@ using BeachApplication.Shared.Models;
 using MinimalHelpers.Routing;
 using OperationResults;
 using OperationResults.AspNetCore.Http;
+using TinyHelpers.AspNetCore.DataAnnotations;
 
 namespace BeachApplication.Endpoints;
 
@@ -14,7 +15,8 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
         var imagesApiGroup = endpoints.MapGroup("/api/images");
 
         imagesApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization("admin", "poweruser")
+            .AllowAnonymous()
+            //.RequireAuthorization("admin", "poweruser")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -24,7 +26,8 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         imagesApiGroup.MapGet("{id:guid}", GetAsync)
-            .RequireAuthorization("admin", "poweruser", "user")
+            .AllowAnonymous()
+            //.RequireAuthorization("admin", "poweruser", "user")
             .Produces<Image>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -33,7 +36,8 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         imagesApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("admin", "poweruser", "user")
+            .AllowAnonymous()
+            //.RequireAuthorization("admin", "poweruser", "user")
             .Produces<PaginatedList<Image>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -41,7 +45,8 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         imagesApiGroup.MapGet("{id:guid}/image", ReadAsync)
-            .RequireAuthorization("admin", "poweruser", "user")
+            .AllowAnonymous()
+            //.RequireAuthorization("admin", "poweruser", "user")
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -51,7 +56,8 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
 
         imagesApiGroup.MapPost(string.Empty, UploadAsync)
             .Accepts<IFormFile>(MediaTypeNames.Multipart.FormData)
-            .RequireAuthorization("admin", "poweruser")
+            .AllowAnonymous()
+            //.RequireAuthorization("admin", "poweruser")
             .Produces<Image>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -85,9 +91,9 @@ public class ImagesEndpoints : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> UploadAsync(IImageService imageService, IFormFile file, HttpContext httpContext)
+    private static async Task<IResult> UploadAsync(IImageService imageService, [AllowedExtensions("*.jpg", "*.jpeg", "*.png")] IFormFile file, HttpContext httpContext)
     {
-        var result = await imageService.UploadAsync(file.FileName, file.OpenReadStream());
+        var result = await imageService.UploadAsync(file.OpenReadStream(), file.FileName);
         return httpContext.CreateResponse(result, "GetImage", new { id = result.Content?.Id });
     }
 }
