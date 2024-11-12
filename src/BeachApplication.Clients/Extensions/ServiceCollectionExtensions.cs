@@ -13,19 +13,16 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddChatServer(this IServiceCollection services, IConfiguration configuration)
     {
-        var settings = configuration.GetSettings<ChatSettings>(nameof(ChatSettings));
-
+        var settings = services.ConfigureAndGet<ChatSettings>(configuration, nameof(ChatSettings));
         services.AddSingleton(settings);
-        services.AddSingleton<IChatServer, ChatServer>();
 
+        services.AddSingleton<IChatServer, ChatServer>();
         return services;
     }
 
     public static IServiceCollection AddEmailSender(this IServiceCollection services, IConfiguration configuration)
     {
-        var settings = configuration.GetSettings<EmailSettings>(nameof(EmailSettings));
-
-        services.AddSingleton(settings);
+        var settings = services.ConfigureAndGet<EmailSettings>(configuration, nameof(EmailSettings));
         services.AddFluentEmail(settings.EmailAddress).WithSendinblue();
 
         return services;
@@ -33,7 +30,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddMessageSender(this IServiceCollection services, IConfiguration configuration)
     {
-        var settings = configuration.GetSettings<MessageSettings>(nameof(MessageSettings));
+        var settings = services.ConfigureAndGet<MessageSettings>(configuration, nameof(MessageSettings));
         services.AddSingleton(settings);
 
         services.AddScoped(_ => Client.CreateDefault(settings.ApiKey));
@@ -42,11 +39,12 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static T GetSettings<T>(this IConfiguration configuration, string sectionName) where T : class
+    private static T ConfigureAndGet<T>(this IServiceCollection services, IConfiguration configuration, string sectionName) where T : class
     {
         var section = configuration.GetSection(sectionName);
         var settings = section.Get<T>();
 
+        services.Configure<T>(section);
         return settings;
     }
 

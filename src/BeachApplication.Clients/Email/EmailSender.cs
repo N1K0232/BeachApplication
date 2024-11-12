@@ -2,6 +2,7 @@
 using FluentEmail.Core;
 using FluentEmail.Core.Interfaces;
 using FluentEmail.Core.Models;
+using Microsoft.Extensions.Options;
 using sib_api_v3_sdk.Api;
 using sib_api_v3_sdk.Client;
 using sib_api_v3_sdk.Model;
@@ -10,9 +11,9 @@ namespace BeachApplication.Clients.Email;
 
 public class EmailSender : ISender
 {
-    public EmailSender(EmailSettings emailSettings)
+    public EmailSender(IOptions<EmailSettings> emailSettingsOptions)
     {
-        Configuration.Default.ApiKey.TryAdd("email-api-key", emailSettings.ApiKey);
+        Configuration.Default.ApiKey.TryAdd("api-key", emailSettingsOptions.Value.ApiKey);
     }
 
     public SendResponse Send(IFluentEmail email, CancellationToken? token = null)
