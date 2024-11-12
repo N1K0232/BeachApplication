@@ -58,6 +58,24 @@
             }
         },
 
+        forgotPassword: async function () {
+            this.isBusy = true;
+
+            try {
+                const response = await forgotPasswordAsync(this.email, language);
+                if (!response.ok) {
+                    const content = await response.json();
+                    this.errorMessage = GetErrorMessage(response.status, content);
+                }
+            }
+            catch (error) {
+                this.errorMessage = error.message;
+            }
+            finally {
+                this.isBusy = false;
+            }
+        },
+
         getQrCode: async function () {
             this.isBusy = true;
 
@@ -142,17 +160,17 @@
             try {
 
                 const response = await registerAsync(this.firstName, this.lastName, this.phoneNumber, this.email, this.password, this.twoFactorEnabled, language);
-                const content = await response.json();
-
-                const errorMessage = GetErrorMessage(response.status, content);
-                if (errorMessage == null) {
+                if (response.ok) {
                     window.location.href = '/Accounts/Login';
                 }
                 else {
-                    alert(errorMessage);
+                    const content = await response.json();
+                    this.errorMessage = GetErrorMessage(response.status, content);
                 }
-            } catch (error) {
-                alert(error);
+                
+            }
+            catch (error) {
+                this.errorMessage = error.message;
             }
             finally {
                 this.isBusy = false;
@@ -161,49 +179,23 @@
 
         resetPassword: async function () {
             this.isBusy = true;
+            const parameters = new URLSearchParams(window.location.search);
 
             try {
-                const response = await resetPasswordAsync(this.email, language);
-                const content = await response.json();
+                const secret = parameters.get('secret');
+                const token = parameters.get('token');
 
-                const errorMessage = GetErrorMessage(response.status, content);
-                if (errorMessage == null) {
-                    window.localStorage.setItem('reset_password_token', content.token);
+                const response = await resetPasswordAsync(secret, token, this.password, language);
+                if (response.ok) {
+                    window.location.href = '/Accounts/Login';
                 }
                 else {
-                    alert(errorMessage);
+                    const content = await response.json();
+                    this.errorMessage = GetErrorMessage(response.status, content);
                 }
-
-            } catch (error) {
-                alert(error);
             }
-            finally {
-                this.isBusy = false;
-            }
-        },
-
-        updatePassword: async function () {
-            this.isBusy = true;
-
-            if (!checkPassword(this.password, this.confirmPassword)) {
-                this.passwordErrorMessage = "the passwords aren't matching";
-                this.isBusy = false;
-                return;
-            }
-
-            try {
-                const response = await updatePasswordAsync(this.email, this.password, language);
-                const content = await response.json();
-
-                const errorMessage = GetErrorMessage(response.status, content);
-                if (errorMessage == null) {
-                    window.location.href = '/';
-                }
-                else {
-                    alert(errorMessage);
-                }
-            } catch (error) {
-                alert(error);
+            catch (error) {
+                this.errorMessage = error.message;
             }
             finally {
                 this.isBusy = false;
@@ -214,7 +206,7 @@
             this.isBusy = true;
 
             try {
-                const response = await validate2FAAsync(this.twoFactorCode, language);
+                const response = await validateAsync(this.twoFactorCode, language);
                 const content = await response.json();
 
                 const errorMessage = GetErrorMessage(response.status, content);
@@ -230,14 +222,26 @@
             }
         },
 
-        invalidLoginForm: function () {
-            return this.email.trim().length === 0 && this.password.trim().length === 0;
-        },
+        verifyEmail: async function () {
+            this.isBusy = true;
+            const parameters = new URLSearchParams(window.location.search);
 
-        invalidRegisterForm: function () {
-            return this.firstName.trim().length === 0 && this.lastName.trim().length === 0
-                && this.email.trim().length === 0 && this.password.trim().length === 0
-                && this.confirmPassword.trim().length === 0;
+            try {
+                const secret = parameters.get('secret');
+                const token = parameters.get('token');
+
+                const response = await verifyEmailAsync(secret, token, language);
+                if (!response.ok) {
+                    const content = await response.json();
+                    this.errorMessage = GetErrorMessage(response.status, content);
+                }
+                else {
+                    window.location.href = '/Accounts/Login';
+                }
+            }
+            catch (error) {
+                this.errorMessage = error.message;
+            }
         }
     }));
 }
@@ -254,6 +258,20 @@ async function enable2FAAsync(language) {
             "Accept-Language": language,
             "Authorization": `Bearer ${accessToken}`
         }
+    });
+
+    return response;
+}
+
+async function forgotPasswordAsync(email, language) {
+    const request = { email: email };
+    const response = await fetch('/api/auth/forgotpassword', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept-Language": language
+        },
+        body: JSON.stringify(request)
     });
 
     return response;
@@ -303,7 +321,15 @@ async function loginAsync(email, password, isPersistent, language) {
 
 async function registerAsync(firstName, lastName, phoneNumber, email, password, twoFactorEnabled, language) {
 
-    const request = { firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, email: email, password: password, twoFactorEnabled: twoFactorEnabled };
+    const request = {
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber === '' ? null : phoneNumber,
+        email: email,
+        password: password,
+        twoFactorEnabled: twoFactorEnabled
+    };
+
     const response = await fetch('/api/auth/register', {
         method: "POST",
         headers: {
@@ -316,8 +342,9 @@ async function registerAsync(firstName, lastName, phoneNumber, email, password, 
     return response;
 }
 
-async function resetPasswordAsync(email, language) {
-    const request = { email: email };
+async function resetPasswordAsync(secret, token, password, language) {
+
+    const request = { secret: secret, token: token, newPassword: password };
     const response = await fetch('/api/auth/resetpassword', {
         method: "POST",
         headers: {
@@ -347,11 +374,27 @@ async function updatePasswordAsync(email, password, language) {
     return response;
 }
 
-async function validate2FAAsync(twoFactorCode, language) {
+async function validateAsync(twoFactorCode, language) {
 
     const token = GetTwoFactorToken();
     const request = { code: twoFactorCode, token: token };
+
     const response = await fetch('/api/auth/validate2fa', {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept-Language": language
+        },
+        body: JSON.stringify(request)
+    });
+
+    return response;
+}
+
+async function verifyEmailAsync(secret, token, language) {
+
+    const request = { secret: secret, token: token };
+    const response = await fetch('/api/auth/verifyemail', {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

@@ -13,6 +13,12 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
     {
         var identityApiGroup = endpoints.MapGroup("/api/auth").AllowAnonymous();
 
+        identityApiGroup.MapPost("/forgotpassword", ForgotPasswordAsync)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("forgotpassword")
+            .WithOpenApi();
+
         identityApiGroup.MapPost("/login", LoginAsync)
             .WithValidation<LoginRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
@@ -33,6 +39,12 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithName("register")
             .WithOpenApi();
 
+        identityApiGroup.MapPost("/resetpassword", ResetPasswordAsync)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("resetpassword")
+            .WithOpenApi();
+
         identityApiGroup.MapPost("/validate2fa", ValidateAsync)
             .WithValidation<TwoFactorValidationRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
@@ -40,12 +52,18 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithName("validate2fa")
             .WithOpenApi();
 
-        identityApiGroup.MapGet("/verifyemail", VerifyEmailAsync)
+        identityApiGroup.MapPost("/verifyemail", VerifyEmailAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .WithName("verifyemail")
             .WithOpenApi();
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(IIdentityService identityService, ForgotPasswordRequest request, HttpContext httpContext)
+    {
+        var result = await identityService.ForgotPasswordAsync(request);
+        return httpContext.CreateResponse(result);
     }
 
     private static async Task<IResult> LoginAsync(IIdentityService identityService, LoginRequest request, HttpContext httpContext)
@@ -66,15 +84,21 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result, StatusCodes.Status201Created);
     }
 
+    private static async Task<IResult> ResetPasswordAsync(IIdentityService identityService, ResetPasswordRequest request, HttpContext httpContext)
+    {
+        var result = await identityService.ResetPasswordAsync(request);
+        return httpContext.CreateResponse(result);
+    }
+
     private static async Task<IResult> ValidateAsync(IIdentityService identityService, TwoFactorValidationRequest request, HttpContext httpContext)
     {
         var result = await identityService.ValidateAsync(request);
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> VerifyEmailAsync(IIdentityService identityService, string userId, string token, HttpContext httpContext)
+    private static async Task<IResult> VerifyEmailAsync(IIdentityService identityService, VerifyEmailRequest request, HttpContext httpContext)
     {
-        var result = await identityService.VerifyEmailAsync(userId, token);
+        var result = await identityService.VerifyEmailAsync(request);
         return httpContext.CreateResponse(result);
     }
 }

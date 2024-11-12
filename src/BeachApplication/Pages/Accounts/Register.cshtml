@@ -10,33 +10,33 @@
     <div class="text-center wrapper">
         <form x-on:submit.prevent>
             <div class="col-auto mt-2 input-box">
-                <input type="text" x-model="firstName" placeholder="Enter your first name" />
+                <input type="text" x-model="firstName" placeholder="Enter your first name" required />
             </div>
             <div class="col-auto mt-2 input-box">
-                <input type="text" x-model="lastName" placeholder="Enter your last name" />
+                <input type="text" x-model="lastName" placeholder="Enter your last name" required />
             </div>
             <div class="col-auto mt-2 input-box">
                 <input type="text" x-model="phoneNumber" placeholder="Enter your phone number" />
             </div>
             <div class="col-auto mt-2 input-box">
-                <input type="email" x-model="email" placeholder="Enter your email" />
+                <input type="email" x-model="email" placeholder="Enter your email" required />
             </div>
             <div class="col-auto mt-2 input-box">
-                <input type="password" x-model="password" placeholder="Enter the password for this account" />
+                <input type="password" x-model="password" placeholder="Enter the password for this account" required />
                 <h6 class="h6" x-text="passwordErrorMessage" x-show="passwordErrorMessage.length != 0 && !isBusy"></h6>
             </div>
             <div class="col-auto mt-2 input-box">
                 <input type="password" x-model="confirmPassword" placeholder="Confirm password" />
                 <h6 class="h6" x-text="passwordErrorMessage" x-show="passwordErrorMessage.length != 0 && !isBusy"></h6>
             </div>
-            <div class="col-auto mt-2">
-                <label><input type="checkbox" x-model="twoFactorEnabled" />Enable Two Factor Authentication</label>
+            <div class="form-check form-switch text-end me-3">
+                <input class="form-check-input" style="float:none" type="checkbox" role="slider" id="twoFactorEnabled" x-model="twoFactorEnabled">
+                <label class="form-check-label" for="twoFactorEnabled">
+                    Enable Two Factor Authentication
+                </label>
             </div>
             <div class="col-auto mt-3">
-                <button class="btn" type="submit" x-on:click="register()" x-bind:disabled="invalidRegisterForm() || isBusy">Register</button>
-            </div>
-            <div class="col-auto mt-2">
-                <button class="btn" type="submit" x-on:click="clear()" x-bind:disabled="invalidRegisterForm() || isBusy">Reset</button>
+                <button class="btn" type="submit" x-on:click="register()" x-bind:disabled="isBusy">Register</button>
             </div>
             <div class="col-auto mt-2">
                 <button class="btn" type="submit" x-on:click="cancel()">Cancel</button>
