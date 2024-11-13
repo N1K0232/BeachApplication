@@ -126,6 +126,11 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         optionsBuilder.UseExceptionProcessor();
         optionsBuilder.EnableDetailedErrors();
 
+        optionsBuilder.ConfigureWarnings(options =>
+        {
+            options.Default(WarningBehavior.Log);
+        });
+
         base.OnConfiguring(optionsBuilder);
     }
 

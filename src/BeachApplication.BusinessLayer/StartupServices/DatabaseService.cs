@@ -12,31 +12,28 @@ public class DatabaseService(IServiceProvider services, ILogger<DatabaseService>
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        using var scope = services.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var dbCreator = context.GetService<IRelationalDatabaseCreator>();
-        var strategy = context.Database.CreateExecutionStrategy();
-
-        logger.LogInformation("Creating database");
-        await strategy.ExecuteAsync(async () =>
+        try
         {
-            var exists = await dbCreator.ExistsAsync(cancellationToken);
-            if (!exists)
+            using var scope = services.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var dbCreator = context.GetService<IRelationalDatabaseCreator>();
+            var strategy = context.Database.CreateExecutionStrategy();
+
+            logger.LogInformation("Creating database");
+            await strategy.ExecuteAsync(async () =>
             {
-                await dbCreator.CreateAsync(cancellationToken);
-            }
-        });
-
-        logger.LogInformation("Running migrations");
-        await strategy.ExecuteAsync(async () =>
+                var exists = await dbCreator.ExistsAsync(cancellationToken);
+                if (!exists)
+                {
+                    await dbCreator.CreateAsync(cancellationToken);
+                }
+            });
+        }
+        catch (Exception ex)
         {
-            using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-            await context.Database.MigrateAsync(cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-            await transaction.DisposeAsync();
-        });
+            logger.LogError(ex, "Caught an unexpected error while creating or migrating the database");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
