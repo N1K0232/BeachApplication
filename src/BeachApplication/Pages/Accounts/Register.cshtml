@@ -2,11 +2,7 @@
 
 @model RegisterModel
 
-@{
-    ViewData["Title"] = "Register";
-}
-
-<div class="register" x-data="auth">
+<div class="auth" x-data="auth">
     <div class="text-center wrapper">
         <form x-on:submit.prevent>
             <div class="col-auto mt-2 input-box">

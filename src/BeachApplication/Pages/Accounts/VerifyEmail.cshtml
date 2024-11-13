@@ -2,7 +2,7 @@
 
 @model VerifyEmailModel
 
-<div x-data="auth" x-cloak x-init="verifyEmail()">
+<div class="auth" x-data="auth" x-cloak x-init="verifyEmail()">
     <div x-show="!isBusy || errorMessage.trim().length == 0">
         <p x-show="errorMessage.trim().length === 0" x-text="Email successfully verified"></p>
         <p x-show="errorMessage.trim().length > 0" x-text="errorMessage"></p>

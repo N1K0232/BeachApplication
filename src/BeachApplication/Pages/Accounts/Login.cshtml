@@ -2,11 +2,7 @@
 
 @model LoginModel
 
-@{
-    ViewData["Title"] = "Login";
-}
-
-<div class="login" x-data="auth">
+<div class="auth" x-data="auth">
     <div class="text-center wrapper">
         <form x-on:submit.prevent>
             <div class="input-box">
