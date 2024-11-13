@@ -161,7 +161,7 @@ builder.Services.AddAuthorization(options =>
 if (swagger.Enabled)
 {
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(options =>
+    builder.Services.AddOpenApi().AddSwaggerGen(options =>
     {
         options.SwaggerDoc("v1", new OpenApiInfo { Title = "Beach Api", Version = "v1" });
         options.AddAuthentication();
@@ -354,8 +354,8 @@ app.UseStaticFiles();
 if (swagger.Enabled)
 {
     app.UseMiddleware<SwaggerBasicAuthenticationMiddleware>();
+    app.MapOpenApi("swagger/{documentName}/swagger.json");
 
-    app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Beach Api v1");
