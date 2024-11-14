@@ -19,28 +19,12 @@
             "destination": "wwwroot/lib/fontawesome"
         },
         {
-            "library": "fontawesome-iconpicker@3.2.0",
-            "destination": "wwwroot/lib/fontawesome-icons"
-        },
-        {
             "library": "alpinejs@3.14.3",
             "destination": "wwwroot/lib/alpinejs"
         },
         {
-            "library": "marked@14.1.3",
+            "library": "marked@15.0.0",
             "destination": "wwwroot/lib/marked"
-        },
-        {
-            "library": "material-ui@4.12.4",
-            "destination": "wwwroot/lib/material-ui"
-        },
-        {
-            "library": "boxicons@2.1.4",
-            "destination": "wwwroot/lib/box-icons"
-        },
-        {
-            "library": "ionicons@7.4.0",
-            "destination": "wwwroot/lib/ion-icons"
         }
     ]
 }
