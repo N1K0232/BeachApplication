@@ -8,5 +8,7 @@ public class ApplicationUser : IdentityUser<Guid>
 
     public string LastName { get; set; }
 
+    public bool IsPersistent { get; set; }
+
     public virtual ICollection<ApplicationUserRole> UserRoles { get; set; }
 }

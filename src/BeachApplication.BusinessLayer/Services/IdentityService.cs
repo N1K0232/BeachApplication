@@ -1,18 +1,24 @@
 ﻿using System.Net.Mime;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using AutoMapper;
 using BeachApplication.Authentication;
 using BeachApplication.Authentication.DataProtection;
 using BeachApplication.Authentication.Entities;
+using BeachApplication.Authentication.Extensions;
 using BeachApplication.Authentication.JwtBearer;
 using BeachApplication.BusinessLayer.Services.Interfaces;
+using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.Contracts;
 using BeachApplication.Shared.Models.Requests;
 using BeachApplication.Shared.Models.Responses;
 using FluentEmail.Core;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using OperationResults;
 using TinyHelpers.Extensions;
@@ -21,35 +27,51 @@ namespace BeachApplication.BusinessLayer.Services;
 
 public class IdentityService : IIdentityService
 {
+    private const string RefreshTokenKey = "RefreshToken";
+    private const string RefreshTokenExpirationKey = "RefreshTokenExpirationDate";
+
     private readonly UserManager<ApplicationUser> userManager;
     private readonly SignInManager<ApplicationUser> signInManager;
     private readonly LinkGenerator linkGenerator;
-    private readonly IHttpContextAccessor httpContextAccessor;
     private readonly IQRCodeGeneratorService qrCodeGeneratorService;
     private readonly IDataProtectionService dataProtectionService;
     private readonly IJwtBearerService jwtBearerService;
     private readonly IFluentEmail fluentEmail;
     private readonly IMapper mapper;
 
+    private string applicationName;
+    private TimeSpan refreshTokenExpirationTime;
+
     public IdentityService(UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         LinkGenerator linkGenerator,
-        IHttpContextAccessor httpContextAccessor,
         IQRCodeGeneratorService qrCodeGeneratorService,
         IDataProtectionService dataProtectionService,
         IJwtBearerService jwtBearerService,
         IFluentEmail fluentEmail,
-        IMapper mapper)
+        IMapper mapper,
+        IOptions<AppSettings> appSettingsOptions,
+        IOptions<JwtBearerSettings> jwtBearerSettingsOptions)
     {
         this.userManager = userManager;
         this.signInManager = signInManager;
         this.linkGenerator = linkGenerator;
-        this.httpContextAccessor = httpContextAccessor;
         this.qrCodeGeneratorService = qrCodeGeneratorService;
         this.dataProtectionService = dataProtectionService;
         this.jwtBearerService = jwtBearerService;
         this.fluentEmail = fluentEmail;
         this.mapper = mapper;
+
+        GetApplicationName(appSettingsOptions.Value);
+        GetRefreshTokenExpirationDate(jwtBearerSettingsOptions.Value);
+    }
+
+    private HttpContext Context
+    {
+        get
+        {
+            return signInManager.Context;
+        }
     }
 
     public async Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request)
@@ -65,7 +87,7 @@ public class IdentityService : IIdentityService
 
         var resetPasswordPage = linkGenerator.GetUriByPage
         (
-            httpContextAccessor.HttpContext,
+            Context,
             "/Accounts/ResetPassword",
             null,
             new { secret, token }
@@ -110,7 +132,7 @@ public class IdentityService : IIdentityService
             return Result.Fail(FailureReasons.ClientError);
         }
 
-        if (user is null || await HasAuthenticatorKeyAsync(user))
+        if (user is null || await AuthenticatorKeyExistsAsync(user))
         {
             return Result.Fail(FailureReasons.ClientError);
         }
@@ -128,14 +150,12 @@ public class IdentityService : IIdentityService
 
         if (!result.Succeeded)
         {
-            var isEmailConfirmed = await userManager.IsEmailConfirmedAsync(user);
-            if (!isEmailConfirmed)
+            if (!await userManager.IsEmailConfirmedAsync(user))
             {
                 return Result.Fail(FailureReasons.ClientError, "You have to confirm your account first");
             }
 
-            var isLockedOut = await userManager.IsLockedOutAsync(user);
-            if (isLockedOut)
+            if (await userManager.IsLockedOutAsync(user))
             {
                 return Result.Fail(FailureReasons.ClientError, $"Your account is locked until {user.LockoutEnd}");
             }
@@ -150,13 +170,51 @@ public class IdentityService : IIdentityService
             return Result.Fail(FailureReasons.ClientError, "Invalid email or password");
         }
 
-        return await CreateTokenAsync(user);
+        if (user.IsPersistent != request.IsPersistent)
+        {
+            user.IsPersistent = request.IsPersistent;
+            await userManager.UpdateAsync(user);
+        }
+
+        var claims = await GetClaimsAsync(user);
+        return await CreateTokenAsync(user, claims);
+    }
+
+    public async Task<Result> LogoutAsync()
+    {
+        await signInManager.SignOutAsync();
+        return Result.Ok();
+    }
+
+    public async Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request)
+    {
+        var user = await jwtBearerService.ValidateTokenAsync(request.AccessToken, true);
+        if (user is null)
+        {
+            return Result.Fail(FailureReasons.ClientError);
+        }
+
+        var userId = user.GetClaimValue(ClaimTypes.NameIdentifier);
+        var dbUser = await userManager.FindByNameAsync(userId);
+
+        var refreshToken = await userManager.GetAuthenticationTokenAsync(dbUser, applicationName, RefreshTokenKey);
+        var expirationDate = DateTime.Parse(await userManager.GetAuthenticationTokenAsync(dbUser, applicationName, RefreshTokenExpirationKey));
+
+        if (refreshToken is null || expirationDate < DateTime.UtcNow || refreshToken != request.RefreshToken)
+        {
+            return Result.Fail(FailureReasons.ClientError);
+        }
+
+        var claims = user.Claims.ToList();
+        await ReplaceSecurityStampClaimAsync(dbUser, claims);
+
+        return await CreateTokenAsync(dbUser, claims);
     }
 
     public async Task<Result> RegisterAsync(RegisterRequest request)
     {
         var user = mapper.Map<ApplicationUser>(request);
-        var result = await userManager.CreateAsync(user, request.Password);
+        var result = await RegisterAsync(user, request.Password);
 
         if (!result.Succeeded)
         {
@@ -169,7 +227,7 @@ public class IdentityService : IIdentityService
 
         var verifyEmailPage = linkGenerator.GetUriByPage
         (
-            httpContextAccessor.HttpContext,
+            Context,
             "/Accounts/VerifyEmail",
             null,
             new { secret, token }
@@ -205,7 +263,6 @@ public class IdentityService : IIdentityService
             return Result.Fail(FailureReasons.ClientError, "Couldn't send the email", detail);
         }
 
-        await userManager.AddToRoleAsync(user, RoleNames.User);
         return Result.Ok();
     }
 
@@ -273,14 +330,13 @@ public class IdentityService : IIdentityService
         }
 
         var tokenProvider = userManager.Options.Tokens.AuthenticatorTokenProvider;
-        var isValidTotpCode = await userManager.VerifyTwoFactorTokenAsync(user, tokenProvider, request.Code);
-
-        if (!isValidTotpCode)
+        if (await userManager.VerifyTwoFactorTokenAsync(user, tokenProvider, request.Code))
         {
-            return Result.Fail(FailureReasons.ClientError, "Invalid two-factor code");
+            var claims = await GetClaimsAsync(user);
+            return await CreateTokenAsync(user, claims);
         }
 
-        return await CreateTokenAsync(user);
+        return Result.Fail(FailureReasons.ClientError, "Invalid two-factor code");
     }
 
     public async Task<Result> VerifyEmailAsync(VerifyEmailRequest request)
@@ -329,7 +385,44 @@ public class IdentityService : IIdentityService
         return Result.Ok();
     }
 
-    private async Task<AuthResponse> CreateTokenAsync(ApplicationUser user)
+    private async Task<bool> AuthenticationTokenExistsAsync(ApplicationUser user, string tokenName)
+    {
+        var token = await userManager.GetAuthenticationTokenAsync(user, applicationName, tokenName);
+        return token.HasValue();
+    }
+
+    private async Task<bool> AuthenticatorKeyExistsAsync(ApplicationUser user)
+    {
+        var secret = await userManager.GetAuthenticatorKeyAsync(user);
+        return secret.HasValue();
+    }
+
+    private async Task<AuthResponse> CreateTokenAsync(ApplicationUser user, IList<Claim> claims)
+    {
+        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims);
+        var refreshToken = GenerateRefreshToken(out var expirationDate);
+
+        if (user.IsPersistent)
+        {
+            await PersistTokenAsync(accessToken);
+        }
+
+        await SaveRefreshTokenAsync(user, refreshToken, expirationDate);
+        return new AuthResponse(accessToken, refreshToken);
+    }
+
+    private string GenerateRefreshToken(out DateTime expirationDate)
+    {
+        using var generator = RandomNumberGenerator.Create();
+        var randomNumber = new byte[256];
+
+        generator.GetBytes(randomNumber);
+        expirationDate = DateTime.UtcNow.Add(refreshTokenExpirationTime);
+
+        return Convert.ToBase64String(randomNumber);
+    }
+
+    private async Task<IList<Claim>> GetClaimsAsync(ApplicationUser user)
     {
         var userRoles = await userManager.GetRolesAsync(user);
         await userManager.UpdateSecurityStampAsync(user);
@@ -347,19 +440,69 @@ public class IdentityService : IIdentityService
         }
         .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var accessToken = await jwtBearerService.CreateTokenAsync(user.UserName, claims.ToList());
-        return new AuthResponse(accessToken);
+        return claims.ToList();
     }
 
-    private async Task<bool> HasAuthenticatorKeyAsync(ApplicationUser user)
+    private async Task PersistTokenAsync(string accessToken)
     {
-        var secret = await userManager.GetAuthenticatorKeyAsync(user);
-        return secret.HasValue();
+        var user = await jwtBearerService.ValidateTokenAsync(accessToken, true);
+        var properties = new AuthenticationProperties { IsPersistent = true };
+
+        var scheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        await Context.SignInAsync(scheme, user, properties);
+    }
+
+    private async Task<IdentityResult> RegisterAsync(ApplicationUser user, string password)
+    {
+        var result = await userManager.CreateAsync(user, password);
+        if (result.Succeeded)
+        {
+            result = await userManager.AddToRoleAsync(user, RoleNames.User);
+        }
+
+        return result;
+    }
+
+    private async Task ReplaceSecurityStampClaimAsync(ApplicationUser user, IList<Claim> claims)
+    {
+        var securityStampClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.SerialNumber);
+        claims.Remove(securityStampClaim);
+
+        await userManager.UpdateSecurityStampAsync(user);
+        claims.Add(new Claim(ClaimTypes.SerialNumber, user.SecurityStamp));
     }
 
     private async Task<string> ResetAndGetAuthenticatorKeyAsync(ApplicationUser user)
     {
         await userManager.ResetAuthenticatorKeyAsync(user);
         return await userManager.GetAuthenticatorKeyAsync(user);
+    }
+
+    private async Task SaveRefreshTokenAsync(ApplicationUser user, string refreshToken, DateTime expirationDate)
+    {
+        // if exists it deletes the first refresh token saved
+        if (await AuthenticationTokenExistsAsync(user, RefreshTokenKey))
+        {
+            await userManager.RemoveAuthenticationTokenAsync(user, applicationName, "RefreshToken");
+        }
+
+        //if exists it deletes the first refresh token expiration date saved
+        if (await AuthenticationTokenExistsAsync(user, RefreshTokenExpirationKey))
+        {
+            await userManager.RemoveAuthenticationTokenAsync(user, applicationName, "RefreshTokenExpirationDate");
+        }
+
+        await userManager.SetAuthenticationTokenAsync(user, applicationName, "RefreshToken", refreshToken);
+        await userManager.SetAuthenticationTokenAsync(user, applicationName, "RefreshTokenExpirationDate", expirationDate.ToString());
+    }
+
+    private void GetApplicationName(AppSettings appSettings)
+    {
+        applicationName = appSettings.ApplicationName;
+    }
+
+    private void GetRefreshTokenExpirationDate(JwtBearerSettings jwtBearerSettings)
+    {
+        refreshTokenExpirationTime = jwtBearerSettings.RefreshTokenExpirationTime;
     }
 }

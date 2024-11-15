@@ -18,12 +18,15 @@ public class JwtBearerService(IOptions<JwtBearerSettings> jwtBearerSettingsOptio
         claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
 
         claims.Add(new Claim(ClaimTypes.Dns, hostName));
-        claims.Union(addresses.Select(address => new Claim(ClaimTypes.Dns, address.ToString())));
+        foreach (var address in addresses)
+        {
+            claims.Add(new Claim(ClaimTypes.Dns, address.ToString()));
+        }
 
         var now = DateTime.UtcNow;
         var notBefore = now.Add(-jwtBearerSettingsOptions.Value.ClockSkew);
 
-        var expires = now.Add(jwtBearerSettingsOptions.Value.ExpirationTime);
+        var expires = now.Add(jwtBearerSettingsOptions.Value.AccessTokenExpirationTime);
         var securityKey = Encoding.UTF8.GetBytes(jwtBearerSettingsOptions.Value.SecurityKey);
 
         var symmetricSecurityKey = new SymmetricSecurityKey(securityKey);
@@ -42,5 +45,36 @@ public class JwtBearerService(IOptions<JwtBearerSettings> jwtBearerSettingsOptio
 
         var handler = new JsonWebTokenHandler();
         return handler.CreateToken(securityTokenDescriptor);
+    }
+
+    public async Task<ClaimsPrincipal> ValidateTokenAsync(string accessToken, bool validateLifetime = false)
+    {
+        var tokenHandler = new JsonWebTokenHandler();
+
+        if (!tokenHandler.CanReadToken(accessToken))
+        {
+            throw new SecurityTokenException("Token is not a well formed Json Web Token (JWT)");
+        }
+
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtBearerSettingsOptions.Value.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtBearerSettingsOptions.Value.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtBearerSettingsOptions.Value.SecurityKey)),
+            RequireExpirationTime = true,
+            ClockSkew = jwtBearerSettingsOptions.Value.ClockSkew
+        };
+
+        var validationResult = await tokenHandler.ValidateTokenAsync(accessToken, tokenValidationParameters);
+        if (!validationResult.IsValid || validationResult.SecurityToken is not JsonWebToken jsonWebToken || jsonWebToken.Alg != SecurityAlgorithms.HmacSha256)
+        {
+            throw new SecurityTokenException("Token is expired or invalid", validationResult.Exception);
+        }
+
+        return new ClaimsPrincipal(validationResult.ClaimsIdentity);
     }
 }

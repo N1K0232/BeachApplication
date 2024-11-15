@@ -12,7 +12,9 @@ public class JwtBearerSettings
 
     public string SecurityAlgorithm { get; init; } = SecurityAlgorithms.HmacSha256;
 
-    public TimeSpan ExpirationTime { get; init; }
+    public TimeSpan AccessTokenExpirationTime { get; init; }
+
+    public TimeSpan RefreshTokenExpirationTime { get; init; }
 
     public TimeSpan ClockSkew { get; init; }
 }
