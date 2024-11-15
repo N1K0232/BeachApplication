@@ -1,12 +1,13 @@
 using System.Net;
 using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using BeachApplication.Authentication;
 using BeachApplication.Authentication.DataProtection;
 using BeachApplication.Authentication.Entities;
-using BeachApplication.Authentication.Extensions;
+using BeachApplication.Authentication.JwtBearer;
 using BeachApplication.Authorization;
 using BeachApplication.BusinessLayer.BackgroundServices;
 using BeachApplication.BusinessLayer.Mapping;
@@ -26,12 +27,15 @@ using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using MinimalHelpers.Routing;
@@ -61,6 +65,7 @@ builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
 
 var settings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
 var swagger = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
+var bearer = builder.Services.ConfigureAndGet<JwtBearerSettings>(builder.Configuration, nameof(JwtBearerSettings));
 
 builder.Services.AddRazorPages();
 builder.Services.AddRouting();
@@ -134,28 +139,6 @@ builder.Services.AddOperationResult(options =>
 builder.Services.ConfigureValidation(options =>
 {
     options.ErrorResponseFormat = ValidationErrorResponseFormat.List;
-});
-
-builder.Services.AddAuthentication(builder.Configuration);
-builder.Services.AddAuthorization(options =>
-{
-    var policyBuilder = new AuthorizationPolicyBuilder().RequireAuthenticatedUser();
-    policyBuilder.Requirements.Add(new UserActiveRequirement());
-
-    var policy = policyBuilder.Build();
-    options.DefaultPolicy = policy;
-
-    options.AddPolicy("UserActive", policy =>
-    {
-        policy.Requirements.Add(new UserActiveRequirement());
-        policy.RequireRole(RoleNames.User);
-    });
-
-    options.AddPolicy("Administrator", policy =>
-    {
-        policy.RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
-        policy.Requirements.Add(new UserActiveRequirement());
-    });
 });
 
 if (swagger.Enabled)
@@ -294,13 +277,61 @@ else
     });
 }
 
+builder.Services.AddScoped<IUserService, HttpUserService>();
+builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
+builder.Services.AddSingleton<IJwtBearerService, JwtBearerService>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.RequireAuthenticatedSignIn = true;
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/Accounts/Login";
+    options.LogoutPath = "/Accounts/Login";
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = bearer.Issuer,
+        ValidateAudience = true,
+        ValidAudience = bearer.Audience,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(bearer.SecurityKey)),
+        RequireExpirationTime = true,
+        ClockSkew = bearer.ClockSkew
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    var policyBuilder = new AuthorizationPolicyBuilder().RequireAuthenticatedUser();
+    policyBuilder.Requirements.Add(new UserActiveRequirement());
+
+    options.DefaultPolicy = policyBuilder.Build();
+
+    options.AddPolicy("UserActive", policy =>
+    {
+        policy.Requirements.Add(new UserActiveRequirement());
+        policy.RequireRole(RoleNames.User);
+    });
+
+    options.AddPolicy("Administrator", policy =>
+    {
+        policy.RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
+        policy.Requirements.Add(new UserActiveRequirement());
+    });
+});
+
 builder.Services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
     .AddClasses(classes => classes.InNamespaceOf<IdentityService>())
     .AsImplementedInterfaces()
     .WithScopedLifetime());
-
-builder.Services.AddScoped<IUserService, HttpUserService>();
-builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
 
 builder.Services.AddHostedService<DatabaseService>();
 builder.Services.AddHostedService<IdentityRoleService>();

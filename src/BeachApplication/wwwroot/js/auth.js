@@ -81,38 +81,16 @@
 
             try {
                 const response = await getQrCodeAsync(language);
-                if (response.ok) {
+                if (response.status === 400) {
+                    window.location.href = '/Accounts/ValidateTwoFactorAuthentication';
+                }
+                else {
                     const blob = await response.blob();
                     this.qrCodeSrc = URL.createObjectURL(blob);
                 }
-                else {
-                    const content = await response.content();
-                    this.errorMessage = GetErrorMessage(response.status, content);
-                }
-            } catch (error) {
+            }
+            catch (error) {
                 this.errormessage = error.message;
-            }
-            finally {
-                this.isBusy = false;
-            }
-        },
-
-        loadProfile: async function () {
-            this.isBusy = true;
-
-            try {
-                const response = await loadProfileAsync(language);
-                const content = await response.json();
-
-                const errorMessage = GetErrorMessage(response.status, content);
-                if (errorMessage == null) {
-                }
-                else {
-                    alert(errorMessage);
-                }
-
-            } catch (error) {
-                alert(error);
             }
             finally {
                 this.isBusy = false;
@@ -129,18 +107,19 @@
                 const errorMessage = GetErrorMessage(response.status, content);
                 if (errorMessage == null) {
                     if (content.token.startsWith('eyJ')) {
-                        window.localStorage.setItem('access_token', content.token);
+                        window.localStorage.setItem('access_token', content.accessToken);
                         window.location.href = '/Dashboard/Products';   
                     }
                     else {
                         window.localStorage.setItem('2fa_token', content.token);
-                        window.location.href = '/';
+                        window.location.href = '/Accounts/TwoFactorQRCode';
                     }
                 }
                 else {
                     alert(errorMessage);
                 }
-            } catch (error) {
+            }
+            catch (error) {
                 alert(error);
             }
             finally {
@@ -211,8 +190,8 @@
 
                 const errorMessage = GetErrorMessage(response.status, content);
                 if (errorMessage == null) {
-                    window.localStorage.setItem('access_token', content.token);
-                    window.location.href = '/Dashboard/Products';
+                    window.localStorage.setItem('access_token', content.accessToken);
+                    window.location.href = '/';
                 }
             } catch (error) {
                 this.errorMessage = error.message;
@@ -242,6 +221,13 @@
             catch (error) {
                 this.errorMessage = error.message;
             }
+            finally {
+                this.isBusy = false;
+            }
+        },
+
+        next: function () {
+            window.location.href = '/Accounts/ValidateTwoFactorAuthentication';
         }
     }));
 }
@@ -278,26 +264,12 @@ async function forgotPasswordAsync(email, language) {
 }
 
 async function getQrCodeAsync(language) {
-    const token = GetTwoFactorToken();
-    const response = await fetch('/api/auth/qrcode?token=' + token, {
+    const token = window.localStorage.getItem('2fa_token');
+    const response = await fetch(`/api/auth/qrcode?token=${token}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
             "Accept-Language": language
-        }
-    });
-
-    return response;
-}
-
-async function loadProfileAsync(language) {
-    const accessToken = GetAccessToken();
-    const response = await fetch('/api/auth/profile', {
-        method: "GET",
-        headers: {
-            "Content-type": "application/json",
-            "Accept-Language": language,
-            "Authorization": `Bearer ${accessToken}`
         }
     });
 
@@ -376,7 +348,7 @@ async function updatePasswordAsync(email, password, language) {
 
 async function validateAsync(twoFactorCode, language) {
 
-    const token = GetTwoFactorToken();
+    const token = window.localStorage.getItem('2fa_token');
     const request = { code: twoFactorCode, token: token };
 
     const response = await fetch('/api/auth/validate2fa', {

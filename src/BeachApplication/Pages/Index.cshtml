@@ -2,6 +2,23 @@
 
 @model IndexModel
 
-@{
-    ViewData["Title"] = "Home page";
+<div x-data="user">
+    <div x-cloak x-init="loadProfile()" @@mouseover="show()" @@mouseleave="hide()">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAO5JREFUSEvVldENwjAMRK+bwCTAJjAJMAlsApsAkwCHEtS6jm0ligSWqvaj9bPPznVA5xg650cUsACwB7B9X3cAVwDH9GzWGAGsAVyULATtEqwIiQBuANiBFoQsrRY8ACU5OXPaWF14gEPS3mJwFnxPDQ9Q0n+cjHM41wKoPQfcbQYszOrC1J8fexLlzvM5IIyRV5T35nPg5fhtANdvleYgK82W8ahZU2rNA1baHg2m2oY25Mjul3SfbZUGsLzHG/jMmyQgYg0eZGIdEkDdaXAtwX8FpfqEBLTIk3NOZJKAZ0vpo2+/eaNWUc39f8ALCDsoGfKFTMgAAAAASUVORK5CYII=" alt="Profile" class="cursor-pointer w-10 h-10 rounded-full " />
+        <div x-show="showProfile" class="absolute bg-white shadow-lg rounded-lg p-4" style="width: 500px; height: 500px; top: 100%; left: 0; transform: translateY(5px);">
+            <h2 class="text-lg font-bold mb-2">Profile Information</h2>
+            <p><strong>First Name:</strong> <span x-text="firstName"></span></p>
+            <p><strong>Last Name:</strong> <span x-text="lastName"></span></p>
+            <p><strong>Email:</strong> <span x-text="email"></span></p>
+            <button @@click="logout()" class="mt-4 bg-red-500 text-white px-4 py-2 rounded">Logout</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("alpine:init", () => {
+            user('@Thread.CurrentThread.CurrentUICulture.TwoLetterISOLanguageName');
+        });
+    </script>
 }

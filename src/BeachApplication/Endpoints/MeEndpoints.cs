@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using BeachApplication.BusinessLayer.Services.Interfaces;
+﻿using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Shared.Models;
 using MinimalHelpers.Routing;
 using OperationResults.AspNetCore.Http;
@@ -10,7 +9,7 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization("UserActive");
+        var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization();
 
         meApiGroup.MapPost("/enable2fa", EnableTwoFactorAsync)
             .Produces(StatusCodes.Status204NoContent)
@@ -28,15 +27,15 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
     }
 
-    private static async Task<IResult> EnableTwoFactorAsync(IMeService meService, ClaimsPrincipal principal, HttpContext httpContext)
+    private static async Task<IResult> EnableTwoFactorAsync(IMeService meService, HttpContext httpContext)
     {
-        var result = await meService.EnableTwoFactorAsync(principal);
+        var result = await meService.EnableTwoFactorAsync(httpContext.User);
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetProfileAsync(IMeService meService, ClaimsPrincipal principal, HttpContext httpContext)
+    private static async Task<IResult> GetProfileAsync(IMeService meService, HttpContext httpContext)
     {
-        var result = await meService.GetAsync(principal);
+        var result = await meService.GetAsync(httpContext.User);
         return httpContext.CreateResponse(result);
     }
 }

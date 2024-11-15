@@ -11,28 +11,46 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
 {
     public static void MapEndpoints(IEndpointRouteBuilder endpoints)
     {
-        var identityApiGroup = endpoints.MapGroup("/api/auth").AllowAnonymous();
+        var identityApiGroup = endpoints.MapGroup("/api/auth");
 
         identityApiGroup.MapPost("/forgotpassword", ForgotPasswordAsync)
+            .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .WithName("forgotpassword")
             .WithOpenApi();
 
+        identityApiGroup.MapGet("/qrcode", GetQrCodeAsync)
+            .AllowAnonymous()
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("qrcode")
+            .WithOpenApi();
+
         identityApiGroup.MapPost("/login", LoginAsync)
+            .AllowAnonymous()
             .WithValidation<LoginRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .WithName("login")
             .WithOpenApi();
 
-        identityApiGroup.MapGet("/qrcode", GetQrCodeAsync)
-            .Produces(StatusCodes.Status200OK)
+        identityApiGroup.MapPost("/logout", LogoutAsync)
+            .RequireAuthorization()
+            .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
-            .WithName("qrcode")
+            .WithName("logout")
+            .WithOpenApi();
+
+        identityApiGroup.MapPost("/refresh", RefreshTokenAsync)
+            .AllowAnonymous()
+            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("refresh")
             .WithOpenApi();
 
         identityApiGroup.MapPost("/register", RegisterAsync)
+            .AllowAnonymous()
             .WithValidation<RegisterRequest>()
             .Produces(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -40,12 +58,14 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         identityApiGroup.MapPost("/resetpassword", ResetPasswordAsync)
+            .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .WithName("resetpassword")
             .WithOpenApi();
 
         identityApiGroup.MapPost("/validate2fa", ValidateAsync)
+            .AllowAnonymous()
             .WithValidation<TwoFactorValidationRequest>()
             .Produces<AuthResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
@@ -53,6 +73,7 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         identityApiGroup.MapPost("/verifyemail", VerifyEmailAsync)
+            .AllowAnonymous()
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
@@ -66,15 +87,27 @@ public class IdentityEndpoints : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
+    private static async Task<IResult> GetQrCodeAsync(IIdentityService identityService, string token, HttpContext httpContext)
+    {
+        var result = await identityService.GetQrCodeAsync(token);
+        return httpContext.CreateResponse(result);
+    }
+
     private static async Task<IResult> LoginAsync(IIdentityService identityService, LoginRequest request, HttpContext httpContext)
     {
         var result = await identityService.LoginAsync(request);
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetQrCodeAsync(IIdentityService identityService, string token, HttpContext httpContext)
+    private static async Task<IResult> LogoutAsync(IIdentityService identityService, HttpContext httpContext)
     {
-        var result = await identityService.GetQrCodeAsync(token);
+        var result = await identityService.LogoutAsync();
+        return httpContext.CreateResponse(result);
+    }
+
+    private static async Task<IResult> RefreshTokenAsync(IIdentityService identityService, RefreshTokenRequest request, HttpContext httpContext)
+    {
+        var result = await identityService.RefreshTokenAsync(request);
         return httpContext.CreateResponse(result);
     }
 
