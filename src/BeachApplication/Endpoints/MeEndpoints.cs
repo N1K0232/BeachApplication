@@ -11,31 +11,66 @@ public class MeEndpoints : IEndpointRouteHandlerBuilder
     {
         var meApiGroup = endpoints.MapGroup("/api/me").RequireAuthorization();
 
+        meApiGroup.MapDelete("/deleteprofilephoto", DeleteProfilePhotoAsync)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("deleteprofilephoto")
+            .WithOpenApi();
+
         meApiGroup.MapPost("/enable2fa", EnableTwoFactorAsync)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
             .WithName("enable2fa")
             .WithOpenApi();
 
         meApiGroup.MapGet("/profile", GetProfileAsync)
             .Produces<User>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
             .WithName("profile")
             .WithOpenApi();
+
+        meApiGroup.MapGet("/profilephoto", GetProfilePhotoAsync)
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("profilephoto")
+            .WithOpenApi();
+
+        meApiGroup.MapPost("/updateprofilephoto", UpdateProfilePhotoAsync)
+            .DisableAntiforgery()
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithName("updateprofilephoto")
+            .WithOpenApi();
+    }
+
+    private static async Task<IResult> DeleteProfilePhotoAsync(IMeService meService, HttpContext httpContext)
+    {
+        var result = await meService.DeleteProfilePhotoAsync();
+        return httpContext.CreateResponse(result);
     }
 
     private static async Task<IResult> EnableTwoFactorAsync(IMeService meService, HttpContext httpContext)
     {
-        var result = await meService.EnableTwoFactorAsync(httpContext.User);
+        var result = await meService.EnableTwoFactorAsync();
         return httpContext.CreateResponse(result);
     }
 
     private static async Task<IResult> GetProfileAsync(IMeService meService, HttpContext httpContext)
     {
-        var result = await meService.GetAsync(httpContext.User);
+        var result = await meService.GetAsync();
+        return httpContext.CreateResponse(result);
+    }
+
+    private static async Task<IResult> GetProfilePhotoAsync(IMeService meService, HttpContext httpContext)
+    {
+        var result = await meService.GetProfilePhotoAsync();
+        return httpContext.CreateResponse(result);
+    }
+
+    private static async Task<IResult> UpdateProfilePhotoAsync(IMeService meService, IFormFile file, HttpContext httpContext)
+    {
+        using var stream = file.OpenReadStream();
+        var result = await meService.UpdateProfilePhotoAsync(stream, file.FileName);
+
         return httpContext.CreateResponse(result);
     }
 }

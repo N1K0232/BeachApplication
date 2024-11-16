@@ -24,6 +24,9 @@ public class AuthenticationDbContext
         {
             b.Property(user => user.FirstName).HasMaxLength(256).IsRequired();
             b.Property(user => user.LastName).HasMaxLength(256).IsRequired(false);
+
+            b.Property(user => user.DateOfBirth).IsRequired(false);
+            b.Property(user => user.ProfilePhotoPath).HasMaxLength(512).IsRequired(false);
         });
 
         builder.Entity<ApplicationUserRole>(b =>

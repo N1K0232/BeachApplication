@@ -4,6 +4,8 @@
     [NormalizedUserName]         NVARCHAR (256)     NULL,
     [FirstName]                  NVARCHAR (256)     NOT NULL,
     [LastName]                   NVARCHAR (256)     NULL,
+    [DateOfBirth]                DATE               NULL,
+    [ProfilePhotoPath]           NVARCHAR (512)     NULL,
     [Email]                      NVARCHAR (256)     NULL,
     [NormalizedEmail]            NVARCHAR (256)     NULL,
     [EmailConfirmed]             BIT                NOT NULL,
