@@ -6,5 +6,5 @@ public interface IStorageProvider
 
     Task<Stream> ReadAsStreamAsync(string path);
 
-    Task SaveAsync(Stream stream, string fileName);
+    Task SaveAsync(Stream stream, string path);
 }
