@@ -26,7 +26,6 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
-using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -144,17 +143,17 @@ builder.Services.ConfigureValidation(options =>
 if (swagger.Enabled)
 {
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddOpenApi().AddSwaggerGen(options =>
+    builder.Services.AddSwaggerGen(options =>
     {
-        options.SwaggerDoc("v1", new OpenApiInfo { Title = "Beach Api", Version = "v1" });
-        options.AddAuthentication();
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "Beach Api",
+            Version = "v1"
+        });
 
+        options.AddAuthentication();
         options.AddDefaultResponse();
         options.AddAcceptLanguageHeader();
-    })
-    .AddFluentValidationRulesToSwagger(options =>
-    {
-        options.SetNotNullableIfMinLengthGreaterThenZero = true;
     });
 }
 
@@ -279,6 +278,8 @@ else
 
 builder.Services.AddScoped<IUserService, HttpUserService>();
 builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
+
+builder.Services.AddScoped<IUrlGeneratorService, UrlGeneratorService>();
 builder.Services.AddSingleton<IJwtBearerService, JwtBearerService>();
 
 builder.Services.AddAuthentication(options =>
@@ -385,8 +386,8 @@ app.UseStaticFiles();
 if (swagger.Enabled)
 {
     app.UseMiddleware<SwaggerBasicAuthenticationMiddleware>();
-    app.MapOpenApi("swagger/{documentName}/swagger.json");
 
+    app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Beach Api v1");

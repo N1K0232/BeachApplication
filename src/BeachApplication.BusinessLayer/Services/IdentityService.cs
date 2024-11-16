@@ -15,9 +15,7 @@ using BeachApplication.Shared.Models.Responses;
 using FluentEmail.Core;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using OperationResults;
@@ -32,7 +30,7 @@ public class IdentityService : IIdentityService
 
     private readonly UserManager<ApplicationUser> userManager;
     private readonly SignInManager<ApplicationUser> signInManager;
-    private readonly LinkGenerator linkGenerator;
+    private readonly IUrlGeneratorService urlGeneratorService;
     private readonly IQRCodeGeneratorService qrCodeGeneratorService;
     private readonly IDataProtectionService dataProtectionService;
     private readonly IJwtBearerService jwtBearerService;
@@ -44,7 +42,7 @@ public class IdentityService : IIdentityService
 
     public IdentityService(UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        LinkGenerator linkGenerator,
+        IUrlGeneratorService urlGeneratorService,
         IQRCodeGeneratorService qrCodeGeneratorService,
         IDataProtectionService dataProtectionService,
         IJwtBearerService jwtBearerService,
@@ -55,7 +53,7 @@ public class IdentityService : IIdentityService
     {
         this.userManager = userManager;
         this.signInManager = signInManager;
-        this.linkGenerator = linkGenerator;
+        this.urlGeneratorService = urlGeneratorService;
         this.qrCodeGeneratorService = qrCodeGeneratorService;
         this.dataProtectionService = dataProtectionService;
         this.jwtBearerService = jwtBearerService;
@@ -64,14 +62,6 @@ public class IdentityService : IIdentityService
 
         GetApplicationName(appSettingsOptions.Value);
         GetRefreshTokenExpirationDate(jwtBearerSettingsOptions.Value);
-    }
-
-    private HttpContext Context
-    {
-        get
-        {
-            return signInManager.Context;
-        }
     }
 
     public async Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request)
@@ -85,13 +75,7 @@ public class IdentityService : IIdentityService
         var secret = await dataProtectionService.ProtectAsync(request.Email, TimeSpan.FromMinutes(15));
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
 
-        var resetPasswordPage = linkGenerator.GetUriByPage
-        (
-            Context,
-            "/Accounts/ResetPassword",
-            null,
-            new { secret, token }
-        );
+        var resetPasswordPage = await urlGeneratorService.GetPageUrlAsync("/Accounts/ResetPassword", new { secret, token });
 
         var message = $$"""
             Someone just requested a password change for your account.
@@ -225,19 +209,13 @@ public class IdentityService : IIdentityService
         var secret = await dataProtectionService.ProtectAsync(user.Id.ToString(), TimeSpan.FromMinutes(15));
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
-        var verifyEmailPage = linkGenerator.GetUriByPage
-        (
-            Context,
-            "/Accounts/VerifyEmail",
-            null,
-            new { secret, token }
-        );
+        var verifyEmailPage = await urlGeneratorService.GetPageUrlAsync("/Accounts/VerifyEmail", new { secret, token });
 
         var message = $$"""
             Good evening,
 
-            It looks like you successfully subscribed to our website.
-            However, before you could have access and log-in, we need you to verify your account first.
+            Welcome to our website.
+            Before you can continue, we need you to verify your account first.
 
             In order to do this, you should click on the link below.
             It will redirect you to the verification page and will automatically verify your email address.
@@ -449,7 +427,7 @@ public class IdentityService : IIdentityService
         var properties = new AuthenticationProperties { IsPersistent = true };
 
         var scheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        await Context.SignInAsync(scheme, user, properties);
+        await signInManager.Context.SignInAsync(scheme, user, properties);
     }
 
     private async Task<IdentityResult> RegisterAsync(ApplicationUser user, string password)
