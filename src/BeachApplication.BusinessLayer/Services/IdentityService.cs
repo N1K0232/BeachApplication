@@ -36,8 +36,8 @@ public class IdentityService : IIdentityService
     private readonly IJwtBearerService jwtBearerService;
     private readonly IFluentEmail fluentEmail;
     private readonly IMapper mapper;
+    private readonly AppSettings appSettings;
 
-    private string applicationName;
     private TimeSpan refreshTokenExpirationTime;
 
     public IdentityService(UserManager<ApplicationUser> userManager,
@@ -60,7 +60,7 @@ public class IdentityService : IIdentityService
         this.fluentEmail = fluentEmail;
         this.mapper = mapper;
 
-        GetApplicationName(appSettingsOptions.Value);
+        appSettings = appSettingsOptions.Value;
         GetRefreshTokenExpirationDate(jwtBearerSettingsOptions.Value);
     }
 
@@ -181,17 +181,15 @@ public class IdentityService : IIdentityService
         var userId = user.GetClaimValue(ClaimTypes.NameIdentifier);
         var dbUser = await userManager.FindByNameAsync(userId);
 
-        var refreshToken = await userManager.GetAuthenticationTokenAsync(dbUser, applicationName, RefreshTokenKey);
-        var expirationDate = DateTime.Parse(await userManager.GetAuthenticationTokenAsync(dbUser, applicationName, RefreshTokenExpirationKey));
+        var refreshToken = await userManager.GetAuthenticationTokenAsync(dbUser, appSettings.ApplicationName, RefreshTokenKey);
+        var expirationDate = DateTime.Parse(await userManager.GetAuthenticationTokenAsync(dbUser, appSettings.ApplicationName, RefreshTokenExpirationKey));
 
         if (refreshToken is null || expirationDate < DateTime.UtcNow || refreshToken != request.RefreshToken)
         {
             return Result.Fail(FailureReasons.ClientError);
         }
 
-        var claims = user.Claims.ToList();
-        await ReplaceSecurityStampClaimAsync(dbUser, claims);
-
+        var claims = await UpdateSecurityStampAsync(dbUser, user.Claims.ToList());
         return await CreateTokenAsync(dbUser, claims);
     }
 
@@ -365,7 +363,7 @@ public class IdentityService : IIdentityService
 
     private async Task<bool> AuthenticationTokenExistsAsync(ApplicationUser user, string tokenName)
     {
-        var token = await userManager.GetAuthenticationTokenAsync(user, applicationName, tokenName);
+        var token = await userManager.GetAuthenticationTokenAsync(user, appSettings.ApplicationName, tokenName);
         return token.HasValue();
     }
 
@@ -414,7 +412,9 @@ public class IdentityService : IIdentityService
             new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName ?? string.Empty),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Name, user.UserName),
-            new Claim(ClaimTypes.SerialNumber, user.SecurityStamp)
+            new Claim(ClaimTypes.SerialNumber, user.SecurityStamp),
+            new Claim(ClaimTypes.PrimarySid, appSettings.ApplicationId),
+            new Claim(ClaimTypes.PrimaryGroupSid, appSettings.ClientId)
         }
         .Union(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
 
@@ -441,13 +441,15 @@ public class IdentityService : IIdentityService
         return result;
     }
 
-    private async Task ReplaceSecurityStampClaimAsync(ApplicationUser user, IList<Claim> claims)
+    private async Task<IList<Claim>> UpdateSecurityStampAsync(ApplicationUser user, IList<Claim> claims)
     {
         var securityStampClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.SerialNumber);
         claims.Remove(securityStampClaim);
 
         await userManager.UpdateSecurityStampAsync(user);
         claims.Add(new Claim(ClaimTypes.SerialNumber, user.SecurityStamp));
+
+        return claims;
     }
 
     private async Task<string> ResetAndGetAuthenticatorKeyAsync(ApplicationUser user)
@@ -458,6 +460,8 @@ public class IdentityService : IIdentityService
 
     private async Task SaveRefreshTokenAsync(ApplicationUser user, string refreshToken, DateTime expirationDate)
     {
+        var applicationName = appSettings.ApplicationName;
+
         // if exists it deletes the first refresh token saved
         if (await AuthenticationTokenExistsAsync(user, RefreshTokenKey))
         {
@@ -472,11 +476,6 @@ public class IdentityService : IIdentityService
 
         await userManager.SetAuthenticationTokenAsync(user, applicationName, "RefreshToken", refreshToken);
         await userManager.SetAuthenticationTokenAsync(user, applicationName, "RefreshTokenExpirationDate", expirationDate.ToString());
-    }
-
-    private void GetApplicationName(AppSettings appSettings)
-    {
-        applicationName = appSettings.ApplicationName;
     }
 
     private void GetRefreshTokenExpirationDate(JwtBearerSettings jwtBearerSettings)

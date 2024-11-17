@@ -311,21 +311,22 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
+    var requirement = new UserActiveRequirement(settings.ApplicationId, settings.ClientId);
     var policyBuilder = new AuthorizationPolicyBuilder().RequireAuthenticatedUser();
-    policyBuilder.Requirements.Add(new UserActiveRequirement());
 
+    policyBuilder.Requirements.Add(requirement);
     options.DefaultPolicy = policyBuilder.Build();
 
     options.AddPolicy("UserActive", policy =>
     {
-        policy.Requirements.Add(new UserActiveRequirement());
+        policy.Requirements.Add(requirement);
         policy.RequireRole(RoleNames.User);
     });
 
     options.AddPolicy("Administrator", policy =>
     {
         policy.RequireRole(RoleNames.Administrator, RoleNames.PowerUser);
-        policy.Requirements.Add(new UserActiveRequirement());
+        policy.Requirements.Add(requirement);
     });
 });
 

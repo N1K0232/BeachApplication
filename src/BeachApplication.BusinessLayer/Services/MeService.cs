@@ -79,9 +79,13 @@ public class MeService : IMeService
     public async Task<Result<User>> GetAsync()
     {
         var userName = await userService.GetUserNameAsync();
-        var user = await userManager.FindByNameAsync(userName);
+        var dbUser = await userManager.FindByNameAsync(userName);
 
-        return mapper.Map<User>(user);
+        var userRoles = await userManager.GetRolesAsync(dbUser);
+        var user = mapper.Map<User>(dbUser);
+
+        user.Role = userRoles.First();
+        return user;
     }
 
     public async Task<Result<StreamFileContent>> GetProfilePhotoAsync()
