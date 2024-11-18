@@ -15,6 +15,7 @@ using BeachApplication.BusinessLayer.Services;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
+using BeachApplication.Claims;
 using BeachApplication.Clients.Extensions;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
@@ -26,6 +27,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -282,6 +284,7 @@ builder.Services.AddScoped<IAuthorizationHandler, UserActiveHandler>();
 builder.Services.AddScoped<IUrlGeneratorService, UrlGeneratorService>();
 builder.Services.AddSingleton<IJwtBearerService, JwtBearerService>();
 
+builder.Services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
