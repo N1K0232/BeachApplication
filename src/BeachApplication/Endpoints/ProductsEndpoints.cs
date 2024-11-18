@@ -15,7 +15,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
         var productsApiGroup = endpoints.MapGroup("/api/products");
 
         productsApiGroup.MapDelete("{id:guid}", DeleteAsync)
-            .RequireAuthorization("admin", "poweruser")
+            .RequireAuthorization("Administrator")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
@@ -23,7 +23,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapGet("{id:guid}", GetAsync)
-            .RequireAuthorization("admin", "poweruser", "user")
+            .RequireAuthorization("Administrator", "UserActive")
             .WithName("GetProduct")
             .Produces<Product>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -32,7 +32,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapGet(string.Empty, GetListAsync)
-            .RequireAuthorization("admin", "poweruser", "user")
+            .RequireAuthorization("Administrator", "UserActive")
             .Produces<PaginatedList<Product>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -40,7 +40,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapPost(string.Empty, InsertAsync)
-            .RequireAuthorization("admin", "poweruser")
+            .RequireAuthorization("Administrator")
             .WithValidation<SaveProductRequest>()
             .Produces<Product>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
@@ -51,7 +51,7 @@ public class ProductsEndpoints : IEndpointRouteHandlerBuilder
             .WithOpenApi();
 
         productsApiGroup.MapPut("{id:guid}", UpdateAsync)
-            .RequireAuthorization("admin", "poweruser")
+            .RequireAuthorization("Administrator")
             .WithValidation<SaveProductRequest>()
             .Produces<Product>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
