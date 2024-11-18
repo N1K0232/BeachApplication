@@ -2,6 +2,7 @@
 using BeachApplication.Authentication;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using EntityFramework.Exceptions.SqlServer;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -17,8 +18,11 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
     private IDbContextTransaction transaction;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    private readonly SqlConnection sqlConnection;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, SqlConnection sqlConnection) : base(options)
     {
+        this.sqlConnection = sqlConnection;
     }
 
     public Task DeleteAsync<T>(T entity) where T : BaseEntity

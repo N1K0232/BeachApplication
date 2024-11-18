@@ -34,6 +34,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -246,6 +247,12 @@ builder.Services.AddDbContext<IApplicationDbContext, ApplicationDbContext>(optio
         sqlOptions.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null);
         sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
     });
+});
+
+builder.Services.AddScoped(_ =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
+    return new SqlConnection(connectionString);
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
