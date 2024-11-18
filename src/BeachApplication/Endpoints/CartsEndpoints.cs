@@ -15,7 +15,7 @@ public class CartsEndpoints : IEndpointRouteHandlerBuilder
 
         cartApiGroup.MapPost("confirm/{id:guid}", ConfirmAsync)
             .RequireAuthorization()
-            .Produces(StatusCodes.Status200OK)
+            .Produces<Order>(StatusCodes.Status202Accepted)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden)
