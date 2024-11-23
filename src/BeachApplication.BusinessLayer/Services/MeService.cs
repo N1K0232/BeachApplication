@@ -38,8 +38,8 @@ public class MeService : IMeService
 
     public async Task<Result> DeleteProfilePhotoAsync()
     {
-        var userName = await userService.GetUserNameAsync();
-        var user = await userManager.FindByNameAsync(userName);
+        var username = userService.GetUserName();
+        var user = await userManager.FindByNameAsync(username);
 
         var path = user.ProfilePhotoPath;
         if (string.IsNullOrWhiteSpace(path))
@@ -62,8 +62,8 @@ public class MeService : IMeService
 
     public async Task<Result> EnableTwoFactorAsync()
     {
-        var userName = await userService.GetUserNameAsync();
-        var user = await userManager.FindByNameAsync(userName);
+        var username = userService.GetUserName();
+        var user = await userManager.FindByNameAsync(username);
         user.TwoFactorEnabled = true;
 
         var result = await userManager.UpdateAsync(user);
@@ -78,8 +78,8 @@ public class MeService : IMeService
 
     public async Task<Result<User>> GetAsync()
     {
-        var userName = await userService.GetUserNameAsync();
-        var dbUser = await userManager.FindByNameAsync(userName);
+        var username = userService.GetUserName();
+        var dbUser = await userManager.FindByNameAsync(username);
 
         var userRoles = await userManager.GetRolesAsync(dbUser);
         var user = mapper.Map<User>(dbUser);
@@ -90,8 +90,8 @@ public class MeService : IMeService
 
     public async Task<Result<StreamFileContent>> GetProfilePhotoAsync()
     {
-        var userName = await userService.GetUserNameAsync();
-        var user = await userManager.FindByNameAsync(userName);
+        var username = userService.GetUserName();
+        var user = await userManager.FindByNameAsync(username);
 
         if (user.ProfilePhotoPath.HasValue())
         {
@@ -104,8 +104,8 @@ public class MeService : IMeService
 
     public async Task<Result> UpdateProfilePhotoAsync(Stream stream, string fileName)
     {
-        var userName = await userService.GetUserNameAsync();
-        var user = await userManager.FindByNameAsync(userName);
+        var username = userService.GetUserName();
+        var user = await userManager.FindByNameAsync(username);
 
         var path = $"users\\{user.Id}\\{fileName}";
         await storageProvider.SaveAsync(stream, path);

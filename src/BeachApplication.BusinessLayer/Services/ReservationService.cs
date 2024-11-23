@@ -76,7 +76,7 @@ public class ReservationService(IApplicationDbContext db, IUserService userServi
         }
 
         var dbReservation = mapper.Map<Entities.Reservation>(request);
-        dbReservation.UserId = await userService.GetIdAsync();
+        dbReservation.UserId = userService.GetUserId();
 
         umbrella.IsBusy = true;
         await db.InsertAsync(dbReservation);
@@ -104,11 +104,10 @@ public class ReservationService(IApplicationDbContext db, IUserService userServi
             return Result.Fail(FailureReasons.ItemNotFound, $"No reservation found with id {id}");
         }
 
-        dbReservation.UserId = await userService.GetIdAsync();
-
+        dbReservation.UserId = userService.GetUserId();
         mapper.Map(request, dbReservation);
-        await db.SaveAsync();
 
+        await db.SaveAsync();
         return mapper.Map<Reservation>(dbReservation);
     }
 
@@ -123,7 +122,7 @@ public class ReservationService(IApplicationDbContext db, IUserService userServi
     private async Task<bool> ReservationExistsAsync(SaveReservationRequest request)
     {
         var query = db.GetData<Entities.Reservation>();
-        var userId = await userService.GetIdAsync();
+        var userId = userService.GetUserId();
 
         var exists = await query.AnyAsync(r => r.UserId == userId && r.StartAt == request.StartAt &&
             r.EndsOn == request.EndsOn && r.EndsAt == request.EndsAt);

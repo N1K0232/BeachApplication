@@ -59,7 +59,7 @@ public class SubscriptionService(IApplicationDbContext db, IUserService userServ
     public async Task<Result<Subscription>> InsertAsync(SaveSubscriptionRequest request)
     {
         var dbSubscription = mapper.Map<Entities.Subscription>(request);
-        dbSubscription.UserId = await userService.GetIdAsync();
+        dbSubscription.UserId = userService.GetUserId();
 
         await db.InsertAsync(dbSubscription);
         await db.SaveAsync();

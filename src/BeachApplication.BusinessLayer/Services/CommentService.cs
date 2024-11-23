@@ -53,7 +53,7 @@ public class CommentService(IApplicationDbContext db, IUserService userService, 
     public async Task<Result<Comment>> InsertAsync(SaveCommentRequest request)
     {
         var dbComment = mapper.Map<Entities.Comment>(request);
-        dbComment.UserId = await userService.GetIdAsync();
+        dbComment.UserId = userService.GetUserId();
 
         await db.InsertAsync(dbComment);
         await db.SaveAsync();
@@ -63,7 +63,7 @@ public class CommentService(IApplicationDbContext db, IUserService userService, 
 
     public async Task<Result<Comment>> UpdateAsync(Guid id, SaveCommentRequest request)
     {
-        var userId = await userService.GetIdAsync();
+        var userId = userService.GetUserId();
         var dbComment = await db.GetData<Entities.Comment>(trackingChanges: true).FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
 
         if (dbComment is null)

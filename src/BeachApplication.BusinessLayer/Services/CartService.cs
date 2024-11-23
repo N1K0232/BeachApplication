@@ -68,7 +68,7 @@ public class CartService(IApplicationDbContext db, IUserService userService, IMa
 
     public async Task<Result<Cart>> GetAsync()
     {
-        var userId = await userService.GetIdAsync();
+        var userId = userService.GetUserId();
         var dbCart = await db.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.UserId == userId);
 
         if (dbCart is null)
@@ -139,7 +139,7 @@ public class CartService(IApplicationDbContext db, IUserService userService, IMa
             dbCart = new Entities.Cart
             {
                 Id = id,
-                UserId = await userService.GetIdAsync()
+                UserId = userService.GetUserId()
             };
 
             await db.InsertAsync(dbCart);
@@ -156,7 +156,7 @@ public class CartService(IApplicationDbContext db, IUserService userService, IMa
     {
         var dbOrder = new Entities.Order
         {
-            UserId = await userService.GetIdAsync(),
+            UserId = userService.GetUserId(),
             OrderDate = DateTime.UtcNow.ToDateOnly(),
             OrderTime = DateTime.UtcNow.ToTimeOnly(),
             Status = OrderStatus.New

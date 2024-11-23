@@ -6,20 +6,22 @@ namespace BeachApplication.Services;
 
 public class HttpUserService(IHttpContextAccessor httpContextAccessor) : IUserService
 {
-    public Task<Guid> GetIdAsync()
+    public ClaimsIdentity GetIdentity()
+    {
+        var identity = httpContextAccessor.HttpContext.User.Identity;
+        return identity as ClaimsIdentity;
+    }
+
+    public Guid GetUserId()
     {
         var value = httpContextAccessor.HttpContext.User.GetClaimValue(ClaimTypes.NameIdentifier);
         if (Guid.TryParse(value, out var userId))
         {
-            return Task.FromResult(userId);
+            return userId;
         }
 
-        return Task.FromResult(Guid.Empty);
+        return Guid.Empty;
     }
 
-    public Task<string> GetUserNameAsync()
-    {
-        var userName = httpContextAccessor.HttpContext.User.Identity.Name;
-        return Task.FromResult(userName);
-    }
+    public string GetUserName() => httpContextAccessor.HttpContext.User.Identity.Name;
 }

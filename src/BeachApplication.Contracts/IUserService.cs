@@ -1,8 +1,12 @@
-﻿namespace BeachApplication.Contracts;
+﻿using System.Security.Claims;
+
+namespace BeachApplication.Contracts;
 
 public interface IUserService
 {
-    Task<Guid> GetIdAsync();
+    ClaimsIdentity GetIdentity();
 
-    Task<string> GetUserNameAsync();
+    Guid GetUserId();
+
+    string GetUserName();
 }

@@ -34,7 +34,7 @@ public class OrderService(IApplicationDbContext db, IUserService userService, IM
 
     public async Task<Result<Order>> GetAsync()
     {
-        var userId = await userService.GetIdAsync();
+        var userId = userService.GetUserId();
         var dbOrder = await db.GetData<Entities.Order>().FirstOrDefaultAsync(o => o.UserId == userId);
 
         if (dbOrder is null)
