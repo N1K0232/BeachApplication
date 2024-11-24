@@ -172,13 +172,4 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
     {
         builder.Entity<T>().HasQueryFilter(x => !x.IsDeleted && x.DeletedAt == null);
     }
-
-    private IEnumerable<EntityEntry> GetEntries(Type entityType)
-    {
-        var entries = ChangeTracker.Entries()
-            .Where(e => entityType.IsAssignableFrom(e.Entity.GetType()))
-            .ToList();
-
-        return entries.Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted);
-    }
 }
