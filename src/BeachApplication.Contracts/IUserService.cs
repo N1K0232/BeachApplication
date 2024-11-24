@@ -6,6 +6,8 @@ public interface IUserService
 {
     ClaimsIdentity GetIdentity();
 
+    Guid GetTenantId();
+
     Guid GetUserId();
 
     string GetUserName();

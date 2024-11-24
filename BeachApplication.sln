@@ -28,6 +28,8 @@ Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Database",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Authentication", "src\BeachApplication.Authentication\BeachApplication.Authentication.csproj", "{18C9BA86-4C80-430F-8D19-068BC7218D75}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.MultiTenant", "src\BeachApplication.MultiTenant\BeachApplication.MultiTenant.csproj", "{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,6 +78,10 @@ Global
 		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

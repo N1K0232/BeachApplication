@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BeachApplication.Authentication\BeachApplication.Authentication.csproj" />
+    <ProjectReference Include="..\BeachApplication.Contracts\BeachApplication.Contracts.csproj" />
     <ProjectReference Include="..\BeachApplication.Shared\BeachApplication.Shared.csproj" />
   </ItemGroup>
 

@@ -40,6 +40,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BeachApplication.BusinessLayer\BeachApplication.BusinessLayer.csproj" />
     <ProjectReference Include="..\BeachApplication.Logging\BeachApplication.Logging.csproj" />
+    <ProjectReference Include="..\BeachApplication.MultiTenant\BeachApplication.MultiTenant.csproj" />
   </ItemGroup>
 
   <ItemGroup>

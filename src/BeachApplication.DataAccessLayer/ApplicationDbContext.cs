@@ -1,8 +1,9 @@
-﻿using System.Reflection;
+﻿using System.Data;
+using System.Reflection;
 using BeachApplication.Authentication;
+using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer.Entities.Common;
 using EntityFramework.Exceptions.SqlServer;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -15,14 +16,14 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
         .Single(t => t.IsGenericMethod && t.Name == nameof(SetQueryFilterOnDeletableEntity));
 
+    private readonly IUserService userService;
+
     private CancellationTokenSource tokenSource = new CancellationTokenSource();
     private IDbContextTransaction transaction;
 
-    private readonly SqlConnection sqlConnection;
-
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, SqlConnection sqlConnection) : base(options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IUserService userService) : base(options)
     {
-        this.sqlConnection = sqlConnection;
+        this.userService = userService;
     }
 
     public Task DeleteAsync<T>(T entity) where T : BaseEntity
@@ -130,11 +131,7 @@ public class ApplicationDbContext : AuthenticationDbContext, IApplicationDbConte
         optionsBuilder.UseExceptionProcessor();
         optionsBuilder.EnableDetailedErrors();
 
-        optionsBuilder.ConfigureWarnings(options =>
-        {
-            options.Default(WarningBehavior.Log);
-        });
-
+        optionsBuilder.EnableSensitiveDataLogging();
         base.OnConfiguring(optionsBuilder);
     }
 

@@ -20,6 +20,8 @@ using BeachApplication.Clients.Extensions;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.Extensions;
+using BeachApplication.MultiTenant;
+using BeachApplication.MultiTenant.Extensions;
 using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
@@ -34,7 +36,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -67,7 +68,9 @@ builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
 
 var settings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
 var swagger = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
+
 var bearer = builder.Services.ConfigureAndGet<JwtBearerSettings>(builder.Configuration, nameof(JwtBearerSettings));
+var tenants = builder.Services.ConfigureAndGet<List<Tenant>>(builder.Configuration, "Tenants");
 
 builder.Services.AddRazorPages();
 builder.Services.AddRouting();
@@ -180,6 +183,12 @@ builder.Services.AddHangfire(options =>
         .UseSqlServerStorage(hangfireConnectionString, storageOptions);
 });
 
+builder.Services.AddMultiTenant(options =>
+{
+    var tenantNames = tenants.Select(t => t.Name);
+    options.AvailableTenants = tenantNames.ToList();
+});
+
 builder.Services.AddScoped(_ => new QRCodeGenerator());
 builder.Services.AddScoped<IQRCodeGeneratorService, QRCodeGeneratorService>();
 
@@ -238,23 +247,16 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
     });
 });
 
-builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
 builder.Services.AddDbContext<IApplicationDbContext, ApplicationDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
     options.UseSqlServer(connectionString, sqlOptions =>
     {
         sqlOptions.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null);
-        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
     });
 });
 
-builder.Services.AddScoped(_ =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
-    return new SqlConnection(connectionString);
-});
-
+builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.User.RequireUniqueEmail = true;
