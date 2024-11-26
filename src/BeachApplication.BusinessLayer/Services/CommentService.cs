@@ -10,7 +10,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CommentService(IApplicationDbContext db, IUserService userService, IMapper mapper) : ICommentService
+public class CommentService(IDataContext db, IUserService userService, IMapper mapper) : ICommentService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

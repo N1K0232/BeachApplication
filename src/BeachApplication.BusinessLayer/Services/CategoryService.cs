@@ -12,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CategoryService(IApplicationDbContext db, IMapper mapper) : ICategoryService
+public class CategoryService(IDataContext db, IMapper mapper) : ICategoryService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

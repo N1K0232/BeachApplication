@@ -10,7 +10,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class UmbrellaService(IApplicationDbContext db, IMapper mapper) : IUmbrellaService
+public class UmbrellaService(IDataContext db, IMapper mapper) : IUmbrellaService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

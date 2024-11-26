@@ -10,7 +10,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class PostService(IApplicationDbContext db, IMapper mapper) : IPostService
+public class PostService(IDataContext db, IMapper mapper) : IPostService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

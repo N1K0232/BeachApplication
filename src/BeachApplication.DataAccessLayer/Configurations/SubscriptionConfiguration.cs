@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class SubscriptionConfiguration : DeletableEntityConfiguration<Subscription>
+internal class SubscriptionConfiguration : TenantEntityConfiguration<Subscription>
 {
     public override void Configure(EntityTypeBuilder<Subscription> builder)
     {

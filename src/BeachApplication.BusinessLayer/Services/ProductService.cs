@@ -11,7 +11,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ProductService(IApplicationDbContext db, IMapper mapper) : IProductService
+public class ProductService(IDataContext db, IMapper mapper) : IProductService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

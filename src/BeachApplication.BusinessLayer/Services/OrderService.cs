@@ -11,7 +11,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class OrderService(IApplicationDbContext db, IUserService userService, IMapper mapper) : IOrderService
+public class OrderService(IDataContext db, IUserService userService, IMapper mapper) : IOrderService
 {
     public async Task<Result> CancelAsync(Guid id)
     {
@@ -26,9 +26,7 @@ public class OrderService(IApplicationDbContext db, IUserService userService, IM
             await db.DeleteAsync(dbOrder.OrderDetails);
         }
 
-        await db.DeleteAsync(dbOrder);
         await db.SaveAsync();
-
         return Result.Ok();
     }
 

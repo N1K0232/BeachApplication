@@ -1,10 +1,9 @@
-﻿using BeachApplication.Authentication.Entities;
-using BeachApplication.DataAccessLayer.Entities.Common;
+﻿using BeachApplication.DataAccessLayer.Entities.Common;
 using BeachApplication.Shared.Enums;
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class Subscription : DeletableEntity
+public class Subscription : TenantEntity
 {
     public Guid UserId { get; set; }
 
@@ -17,6 +16,4 @@ public class Subscription : DeletableEntity
     public SubscriptionStatus Status { get; set; }
 
     public string Notes { get; set; }
-
-    public virtual ApplicationUser User { get; set; }
 }

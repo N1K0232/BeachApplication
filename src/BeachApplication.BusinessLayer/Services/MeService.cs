@@ -1,14 +1,12 @@
-﻿using AutoMapper;
+﻿using System.Net.Mime;
+using AutoMapper;
 using BeachApplication.Authentication.Entities;
 using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.Contracts;
 using BeachApplication.Shared.Models;
 using BeachApplication.Shared.Models.Requests;
-using BeachApplication.StorageProviders;
 using Microsoft.AspNetCore.Identity;
-using MimeMapping;
 using OperationResults;
-using TinyHelpers.Extensions;
 
 namespace BeachApplication.BusinessLayer.Services;
 
@@ -16,17 +14,14 @@ public class MeService : IMeService
 {
     private readonly UserManager<ApplicationUser> userManager;
     private readonly IUserService userService;
-    private readonly IStorageProvider storageProvider;
     private readonly IMapper mapper;
 
     public MeService(UserManager<ApplicationUser> userManager,
         IUserService userService,
-        IStorageProvider storageProvider,
         IMapper mapper)
     {
         this.userManager = userManager;
         this.userService = userService;
-        this.storageProvider = storageProvider;
         this.mapper = mapper;
     }
 
@@ -38,19 +33,15 @@ public class MeService : IMeService
 
     public async Task<Result> DeleteProfilePhotoAsync()
     {
-        var username = userService.GetUserName();
-        var user = await userManager.FindByNameAsync(username);
-
-        var path = user.ProfilePhotoPath;
-        if (string.IsNullOrWhiteSpace(path))
+        var user = await userManager.FindByNameAsync(userService.GetUserName());
+        if (user.ProfilePhoto is null)
         {
-            return Result.Fail(FailureReasons.ClientError, "No path was specified");
+            return Result.Fail(FailureReasons.ClientError, "No profile photo was found");
         }
 
-        await storageProvider.DeleteAsync(path);
-        user.ProfilePhotoPath = null;
-
+        user.ProfilePhoto = null;
         var result = await userManager.UpdateAsync(user);
+
         if (!result.Succeeded)
         {
             var errors = string.Join(',', result.Errors.Select(e => e.Description));
@@ -62,8 +53,7 @@ public class MeService : IMeService
 
     public async Task<Result> EnableTwoFactorAsync()
     {
-        var username = userService.GetUserName();
-        var user = await userManager.FindByNameAsync(username);
+        var user = await userManager.FindByNameAsync(userService.GetUserName());
         user.TwoFactorEnabled = true;
 
         var result = await userManager.UpdateAsync(user);
@@ -78,41 +68,35 @@ public class MeService : IMeService
 
     public async Task<Result<User>> GetAsync()
     {
-        var username = userService.GetUserName();
-        var dbUser = await userManager.FindByNameAsync(username);
-
+        var dbUser = await userManager.FindByNameAsync(userService.GetUserName());
         var userRoles = await userManager.GetRolesAsync(dbUser);
-        var user = mapper.Map<User>(dbUser);
 
+        var user = mapper.Map<User>(dbUser);
         user.Role = userRoles.First();
+
         return user;
     }
 
-    public async Task<Result<StreamFileContent>> GetProfilePhotoAsync()
+    public async Task<Result<ByteArrayFileContent>> GetProfilePhotoAsync()
     {
-        var username = userService.GetUserName();
-        var user = await userManager.FindByNameAsync(username);
-
-        if (user.ProfilePhotoPath.HasValue())
+        var user = await userManager.FindByNameAsync(userService.GetUserName());
+        if (user.ProfilePhoto is null)
         {
-            var stream = await storageProvider.ReadAsStreamAsync(user.ProfilePhotoPath);
-            return new StreamFileContent(stream, MimeUtility.GetMimeMapping(user.ProfilePhotoPath));
+            return Result.Fail(FailureReasons.ClientError, "No image was specified");
         }
 
-        return Result.Fail(FailureReasons.ClientError, "No path was specified");
+        return new ByteArrayFileContent(user.ProfilePhoto, user.ContentType ?? MediaTypeNames.Image.Png);
     }
 
-    public async Task<Result> UpdateProfilePhotoAsync(Stream stream, string fileName)
+    public async Task<Result> UpdateProfilePhotoAsync(Stream stream, string contentType)
     {
-        var username = userService.GetUserName();
-        var user = await userManager.FindByNameAsync(username);
+        await using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream);
 
-        var path = $"users\\{user.Id}\\{fileName}";
-        await storageProvider.SaveAsync(stream, path);
+        var user = await userManager.FindByNameAsync(userService.GetUserName());
+        user.ProfilePhoto = memoryStream.ToArray();
 
-        user.ProfilePhotoPath = path;
         var result = await userManager.UpdateAsync(user);
-
         if (!result.Succeeded)
         {
             var errors = string.Join(',', result.Errors.Select(e => e.Description));

@@ -14,7 +14,7 @@ public interface IMeService
 
     Task<Result<User>> GetAsync();
 
-    Task<Result<StreamFileContent>> GetProfilePhotoAsync();
+    Task<Result<ByteArrayFileContent>> GetProfilePhotoAsync();
 
-    Task<Result> UpdateProfilePhotoAsync(Stream stream, string fileName);
+    Task<Result> UpdateProfilePhotoAsync(Stream stream, string contentType);
 }

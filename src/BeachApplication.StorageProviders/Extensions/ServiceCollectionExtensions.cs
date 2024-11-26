@@ -12,11 +12,45 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services, nameof(services));
         ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
 
-        var options = new AzureStorageOptions();
-        configuration.Invoke(options);
+        services.AddScoped(_ =>
+        {
+            var options = new AzureStorageOptions();
+            configuration.Invoke(options);
 
-        services.AddSingleton(options);
-        return AddAzureStorageCore(services);
+            return options;
+        });
+
+        services.AddScoped(services =>
+        {
+            var options = services.GetRequiredService<AzureStorageOptions>();
+            return new BlobServiceClient(options.ConnectionString);
+        });
+
+        services.AddScoped<IStorageProvider, AzureStorageProvider>();
+        return services;
+    }
+
+    public static IServiceCollection AddAzureStorage(this IServiceCollection services, Action<IServiceProvider, AzureStorageOptions> configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
+        ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
+
+        services.AddScoped(services =>
+        {
+            var options = new AzureStorageOptions();
+            configuration.Invoke(services, options);
+
+            return options;
+        });
+
+        services.AddScoped(services =>
+        {
+            var options = services.GetRequiredService<AzureStorageOptions>();
+            return new BlobServiceClient(options.ConnectionString);
+        });
+
+        services.AddScoped<IStorageProvider, AzureStorageProvider>();
+        return services;
     }
 
     public static IServiceCollection AddFileSystemStorage(this IServiceCollection services, Action<FileSystemStorageOptions> configuration)
@@ -29,17 +63,6 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(options);
         services.AddScoped<IStorageProvider, FileSystemStorageProvider>();
-
-        return services;
-    }
-
-    private static IServiceCollection AddAzureStorageCore(IServiceCollection services)
-    {
-        services.AddScoped(services =>
-        {
-            var options = services.GetRequiredService<AzureStorageOptions>();
-            return new BlobServiceClient(options.ConnectionString);
-        });
 
         return services;
     }

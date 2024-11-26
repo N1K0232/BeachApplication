@@ -10,11 +10,13 @@ public class AuthenticationDbContext
     : IdentityDbContext<ApplicationUser, ApplicationRole, Guid, IdentityUserClaim<Guid>, ApplicationUserRole,
       IdentityUserLogin<Guid>, IdentityRoleClaim<Guid>, IdentityUserToken<Guid>>, IDataProtectionKeyContext
 {
-    public AuthenticationDbContext(DbContextOptions options) : base(options)
+    public AuthenticationDbContext(DbContextOptions<AuthenticationDbContext> options) : base(options)
     {
     }
 
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+
+    public DbSet<Tenant> Tenants { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -26,7 +28,12 @@ public class AuthenticationDbContext
             b.Property(user => user.LastName).HasMaxLength(256).IsRequired(false);
 
             b.Property(user => user.DateOfBirth).IsRequired(false);
-            b.Property(user => user.ProfilePhotoPath).HasMaxLength(512).IsRequired(false);
+            b.Property(user => user.ProfilePhoto).HasColumnType("VARBINARY(MAX)").IsRequired(false);
+
+            b.HasOne(user => user.Tenant)
+                .WithMany(tenant => tenant.Users)
+                .HasForeignKey(user => user.TenantId)
+                .IsRequired(false);
         });
 
         builder.Entity<ApplicationUserRole>(b =>
@@ -52,6 +59,19 @@ public class AuthenticationDbContext
 
             b.Property(k => k.FriendlyName).HasMaxLength(256).IsRequired(false);
             b.Property(k => k.Xml).HasColumnType("NVARCHAR(MAX)").IsRequired(false);
+        });
+
+        builder.Entity<Tenant>(b =>
+        {
+            b.ToTable("Tenants");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id).HasDefaultValueSql("newid()");
+
+            b.Property(t => t.Name).HasMaxLength(256).IsRequired();
+            b.Property(t => t.SqlConnectionString).HasMaxLength(4000).IsRequired().IsUnicode(false);
+
+            b.Property(t => t.AzureStorageConnectionString).HasMaxLength(4000).IsRequired(false).IsUnicode(false);
+            b.Property(t => t.ContainerName).HasMaxLength(256).IsRequired(false).IsUnicode(false);
         });
     }
 }

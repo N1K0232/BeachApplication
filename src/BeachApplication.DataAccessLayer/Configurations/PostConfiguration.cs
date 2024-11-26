@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class PostConfiguration : BaseEntityConfiguration<Post>
+internal class PostConfiguration : TenantEntityConfiguration<Post>
 {
     public override void Configure(EntityTypeBuilder<Post> builder)
     {

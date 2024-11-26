@@ -2,7 +2,7 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class CartItem : BaseEntity
+public class CartItem : TenantEntity
 {
     public Guid CartId { get; set; }
 

@@ -15,7 +15,7 @@ public class DatabaseService(IServiceProvider services, ILogger<DatabaseService>
         try
         {
             using var scope = services.CreateAsyncScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
 
             var dbCreator = context.GetService<IRelationalDatabaseCreator>();
             var strategy = context.Database.CreateExecutionStrategy();

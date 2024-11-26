@@ -5,7 +5,7 @@ using Quartz;
 
 namespace BeachApplication.BusinessLayer.BackgroundServices;
 
-public class ProductsManagerBackgroundJob(IApplicationDbContext db) : IJob
+public class ProductsManagerBackgroundJob(IDataContext db) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {

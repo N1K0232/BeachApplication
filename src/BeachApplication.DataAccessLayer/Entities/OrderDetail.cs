@@ -2,7 +2,7 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class OrderDetail : DeletableEntity
+public class OrderDetail : TenantEntity
 {
     public Guid OrderId { get; set; }
 

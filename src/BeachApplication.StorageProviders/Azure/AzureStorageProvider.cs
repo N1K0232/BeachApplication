@@ -8,8 +8,10 @@ public class AzureStorageProvider(BlobServiceClient blobServiceClient, AzureStor
 {
     public async Task DeleteAsync(string path)
     {
-        var blobContainerClient = blobServiceClient.GetBlobContainerClient(options.ContainerName);
-        await blobContainerClient.DeleteBlobIfExistsAsync(path);
+        var (containerName, blobName) = ExtractContainerBlobName(path);
+        var blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
+
+        await blobContainerClient.DeleteBlobIfExistsAsync(blobName);
     }
 
     public async Task<bool> ExistsAsync(string path)
@@ -28,8 +30,7 @@ public class AzureStorageProvider(BlobServiceClient blobServiceClient, AzureStor
             return null;
         }
 
-        var stream = await blobClient.OpenReadAsync();
-        return stream;
+        return await blobClient.OpenReadAsync();
     }
 
     public async Task SaveAsync(Stream stream, string path)
@@ -46,13 +47,29 @@ public class AzureStorageProvider(BlobServiceClient blobServiceClient, AzureStor
 
     private async Task<BlobClient> GetBlobClientAsync(string path, bool createIfNotExists = false)
     {
-        var blobContainerClient = blobServiceClient.GetBlobContainerClient(options.ContainerName);
+        var (containerName, blobName) = ExtractContainerBlobName(path);
+        var blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
         if (createIfNotExists)
         {
             await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
         }
 
-        return blobContainerClient.GetBlobClient(path);
+        return blobContainerClient.GetBlobClient(blobName);
+    }
+
+    private (string ContainerName, string BlobName) ExtractContainerBlobName(string path)
+    {
+        var relativePath = path?.Replace(@"\", "/") ?? string.Empty;
+        if (!relativePath.StartsWith('/') && !string.IsNullOrWhiteSpace(options.ContainerName))
+        {
+            return (options.ContainerName, path);
+        }
+
+        var root = Path.GetPathRoot(relativePath);
+        var fileName = relativePath[(root ?? string.Empty).Length..];
+
+        var parts = fileName.Split('/');
+        return (parts.First().ToLowerInvariant(), string.Join('/', parts.Skip(1)));
     }
 }

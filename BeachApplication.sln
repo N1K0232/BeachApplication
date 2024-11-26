@@ -24,11 +24,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Clients", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Logging", "src\BeachApplication.Logging\BeachApplication.Logging.csproj", "{50CA13C8-8CD1-4BEC-943F-4D6B68E26037}"
 EndProject
-Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Database", "src\BeachApplication.Database\BeachApplication.Database.sqlproj", "{F1CE5243-C917-4737-AF8D-4D6D834B27CC}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BeachApplication.Authentication", "src\BeachApplication.Authentication\BeachApplication.Authentication.csproj", "{18C9BA86-4C80-430F-8D19-068BC7218D75}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeachApplication.MultiTenant", "src\BeachApplication.MultiTenant\BeachApplication.MultiTenant.csproj", "{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}"
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Authentication.Database", "database\BeachApplication.Authentication.Database\BeachApplication.Authentication.Database.sqlproj", "{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "BeachApplication.Database", "database\BeachApplication.Database\BeachApplication.Database.sqlproj", "{F1CE5243-C917-4737-AF8D-4D6D834B27CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,20 +68,22 @@ Global
 		{50CA13C8-8CD1-4BEC-943F-4D6B68E26037}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{50CA13C8-8CD1-4BEC-943F-4D6B68E26037}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50CA13C8-8CD1-4BEC-943F-4D6B68E26037}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9D51D4D-DB4E-4244-BE71-74D1255CCA04}.Release|Any CPU.Deploy.0 = Release|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F1CE5243-C917-4737-AF8D-4D6D834B27CC}.Release|Any CPU.Deploy.0 = Release|Any CPU
-		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{18C9BA86-4C80-430F-8D19-068BC7218D75}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7F7BB9A1-FA28-48A4-B7B9-D82140D2F756}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

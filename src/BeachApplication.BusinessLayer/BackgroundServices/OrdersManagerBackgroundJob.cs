@@ -8,9 +8,9 @@ namespace BeachApplication.BusinessLayer.BackgroundServices;
 
 public class OrdersManagerBackgroundJob : IJob
 {
-    private readonly ApplicationDbContext applicationDbContext;
+    private readonly DataContext applicationDbContext;
 
-    public OrdersManagerBackgroundJob(ApplicationDbContext applicationDbContext)
+    public OrdersManagerBackgroundJob(DataContext applicationDbContext)
     {
         this.applicationDbContext = applicationDbContext;
     }

@@ -1,9 +1,8 @@
-﻿using BeachApplication.Authentication.Entities;
-using BeachApplication.DataAccessLayer.Entities.Common;
+﻿using BeachApplication.DataAccessLayer.Entities.Common;
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class Reservation : DeletableEntity
+public class Reservation : TenantEntity
 {
     public Guid UserId { get; set; }
 
@@ -20,8 +19,6 @@ public class Reservation : DeletableEntity
     public string Notes { get; set; }
 
     public decimal? TotalPrice { get; set; }
-
-    public virtual ApplicationUser User { get; set; }
 
     public virtual Umbrella Umbrella { get; set; }
 }

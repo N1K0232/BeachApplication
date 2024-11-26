@@ -2,7 +2,7 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class Image : BaseEntity
+public class Image : TenantEntity
 {
     public string Path { get; set; }
 

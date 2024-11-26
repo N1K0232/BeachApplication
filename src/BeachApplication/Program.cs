@@ -12,6 +12,7 @@ using BeachApplication.Authorization;
 using BeachApplication.BusinessLayer.BackgroundServices;
 using BeachApplication.BusinessLayer.Mapping;
 using BeachApplication.BusinessLayer.Services;
+using BeachApplication.BusinessLayer.Services.Interfaces;
 using BeachApplication.BusinessLayer.Settings;
 using BeachApplication.BusinessLayer.StartupServices;
 using BeachApplication.BusinessLayer.Validations;
@@ -20,8 +21,6 @@ using BeachApplication.Clients.Extensions;
 using BeachApplication.Contracts;
 using BeachApplication.DataAccessLayer;
 using BeachApplication.Extensions;
-using BeachApplication.MultiTenant;
-using BeachApplication.MultiTenant.Extensions;
 using BeachApplication.Services;
 using BeachApplication.StorageProviders.Extensions;
 using BeachApplication.Swagger;
@@ -53,7 +52,6 @@ using Quartz.AspNetCore;
 using Serilog;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.Swagger;
-using TinyHelpers.Extensions;
 using TinyHelpers.Json.Serialization;
 using ResultErrorResponseFormat = OperationResults.AspNetCore.Http.ErrorResponseFormat;
 using ValidationErrorResponseFormat = MinimalHelpers.Validation.ErrorResponseFormat;
@@ -68,9 +66,7 @@ builder.Host.UseSerilog((hostingContext, loggerConfiguration) =>
 
 var settings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings));
 var swagger = builder.Services.ConfigureAndGet<SwaggerSettings>(builder.Configuration, nameof(SwaggerSettings));
-
 var bearer = builder.Services.ConfigureAndGet<JwtBearerSettings>(builder.Configuration, nameof(JwtBearerSettings));
-var tenants = builder.Services.ConfigureAndGet<List<Tenant>>(builder.Configuration, "Tenants");
 
 builder.Services.AddRazorPages();
 builder.Services.AddRouting();
@@ -82,7 +78,7 @@ builder.Services.AddRequestLocalization(settings.SupportedCultures);
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddWebOptimizer(minifyCss: true, minifyJavaScript: builder.Environment.IsProduction());
-builder.Services.AddDataProtection().SetApplicationName(settings.ApplicationName).PersistKeysToDbContext<ApplicationDbContext>();
+builder.Services.AddDataProtection().SetApplicationName(settings.ApplicationName).PersistKeysToDbContext<AuthenticationDbContext>();
 
 builder.Services.AddScoped<IDataProtectionService, DataProtectionService>();
 builder.Services.AddScoped(services =>
@@ -183,12 +179,6 @@ builder.Services.AddHangfire(options =>
         .UseSqlServerStorage(hangfireConnectionString, storageOptions);
 });
 
-builder.Services.AddMultiTenant(options =>
-{
-    var tenantNames = tenants.Select(t => t.Name);
-    options.AvailableTenants = tenantNames.ToList();
-});
-
 builder.Services.AddScoped(_ => new QRCodeGenerator());
 builder.Services.AddScoped<IQRCodeGeneratorService, QRCodeGeneratorService>();
 
@@ -247,16 +237,28 @@ builder.Services.AddResiliencePipeline<string, HttpResponseMessage>("http", (bui
     });
 });
 
-builder.Services.AddDbContext<IApplicationDbContext, ApplicationDbContext>(options =>
+var authConnectionString = builder.Configuration.GetConnectionString("AuthConnection");
+builder.Services.AddSqlServer<AuthenticationDbContext>(authConnectionString, options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("SqlConnection");
-    options.UseSqlServer(connectionString, sqlOptions =>
+    options.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null);
+});
+
+builder.Services.AddDbContext<IDataContext, DataContext>((services, options) =>
+{
+    var tenantService = services.GetRequiredService<ITenantService>();
+    var tenant = tenantService.Get();
+
+    options.UseSqlServer(tenant.SqlConnectionString, sqlOptions =>
     {
         sqlOptions.EnableRetryOnFailure(10, TimeSpan.FromSeconds(2), null);
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
     });
 });
 
-builder.Services.AddHealthChecks().AddDbContextCheck<ApplicationDbContext>("database");
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AuthenticationDbContext>("identity")
+    .AddDbContextCheck<DataContext>("application");
+
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.User.RequireUniqueEmail = true;
@@ -267,23 +269,25 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
 })
-.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddEntityFrameworkStores<AuthenticationDbContext>()
 .AddDefaultTokenProviders();
 
-var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorageConnection");
-if (azureStorageConnectionString.HasValue())
-{
-    builder.Services.AddAzureStorage(options =>
-    {
-        options.ConnectionString = azureStorageConnectionString;
-        options.ContainerName = settings.StorageFolder;
-    });
-}
-else
+if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddFileSystemStorage(options =>
     {
         options.StorageFolder = settings.StorageFolder;
+    });
+}
+else
+{
+    builder.Services.AddAzureStorage((services, options) =>
+    {
+        var tenantService = services.GetRequiredService<ITenantService>();
+        var tenant = tenantService.Get();
+
+        options.ConnectionString = tenant.AzureStorageConnectionString;
+        options.ContainerName = tenant.ContainerName;
     });
 }
 

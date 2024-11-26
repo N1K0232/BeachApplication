@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BeachApplication.Authentication\BeachApplication.Authentication.csproj" />
     <ProjectReference Include="..\BeachApplication.Clients\BeachApplication.Clients.csproj" />
     <ProjectReference Include="..\BeachApplication.DataAccessLayer\BeachApplication.DataAccessLayer.csproj" />
     <ProjectReference Include="..\BeachApplication.StorageProviders\BeachApplication.StorageProviders.csproj" />

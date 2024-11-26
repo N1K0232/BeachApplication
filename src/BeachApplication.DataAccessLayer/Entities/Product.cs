@@ -2,7 +2,7 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class Product : DeletableEntity
+public class Product : TenantEntity
 {
     public Guid CategoryId { get; set; }
 

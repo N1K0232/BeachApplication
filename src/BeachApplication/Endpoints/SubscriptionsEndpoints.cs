@@ -67,9 +67,9 @@ public class SubscriptionsEndpoints : IEndpointRouteHandlerBuilder
         return httpContext.CreateResponse(result);
     }
 
-    private static async Task<IResult> GetListAsync(ISubscriptionService subscriptionService, HttpContext httpContext, string userName = null)
+    private static async Task<IResult> GetListAsync(ISubscriptionService subscriptionService, HttpContext httpContext)
     {
-        var result = await subscriptionService.GetListAsync(userName);
+        var result = await subscriptionService.GetListAsync();
         return httpContext.CreateResponse(result);
     }
 

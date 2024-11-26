@@ -1,21 +1,13 @@
 ﻿using System.Security.Claims;
+using BeachApplication.Authentication.Entities;
 using BeachApplication.Authentication.Extensions;
 using BeachApplication.Contracts;
-using BeachApplication.MultiTenant;
+using Microsoft.AspNetCore.Identity;
 
 namespace BeachApplication.Services;
 
-public class HttpUserService : IUserService
+public class HttpUserService(UserManager<ApplicationUser> userManager, IHttpContextAccessor httpContextAccessor) : IUserService
 {
-    private readonly IHttpContextAccessor httpContextAccessor;
-    private readonly ITenantService tenantService;
-
-    public HttpUserService(IHttpContextAccessor httpContextAccessor, ITenantService tenantService)
-    {
-        this.httpContextAccessor = httpContextAccessor;
-        this.tenantService = tenantService;
-    }
-
     public ClaimsIdentity GetIdentity()
     {
         var identity = httpContextAccessor.HttpContext.User.Identity;
@@ -24,8 +16,13 @@ public class HttpUserService : IUserService
 
     public Guid GetTenantId()
     {
-        var tenant = tenantService.GetCurrent();
-        return tenant.Id;
+        string tenantHeader = httpContextAccessor.HttpContext.Request.Headers["TenantId"];
+        if (Guid.TryParse(tenantHeader, out var tenantId))
+        {
+            return tenantId;
+        }
+
+        return Guid.Empty;
     }
 
     public Guid GetUserId()

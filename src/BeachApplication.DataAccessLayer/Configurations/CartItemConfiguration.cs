@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class CartItemConfiguration : BaseEntityConfiguration<CartItem>
+internal class CartItemConfiguration : TenantEntityConfiguration<CartItem>
 {
     public override void Configure(EntityTypeBuilder<CartItem> builder)
     {

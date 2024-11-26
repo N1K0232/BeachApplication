@@ -12,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ImageService(IApplicationDbContext db, IStorageProvider storageProvider, IMapper mapper) : IImageService
+public class ImageService(IDataContext db, IStorageProvider storageProvider, IMapper mapper) : IImageService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {

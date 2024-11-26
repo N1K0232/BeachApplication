@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class ReservationConfiguration : DeletableEntityConfiguration<Reservation>
+internal class ReservationConfiguration : TenantEntityConfiguration<Reservation>
 {
     public override void Configure(EntityTypeBuilder<Reservation> builder)
     {

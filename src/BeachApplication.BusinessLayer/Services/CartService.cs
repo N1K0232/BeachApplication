@@ -12,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CartService(IApplicationDbContext db, IUserService userService, IMapper mapper) : ICartService
+public class CartService(IDataContext db, IUserService userService, IMapper mapper) : ICartService
 {
     public async Task<Result<Order>> ConfirmAsync(Guid id)
     {

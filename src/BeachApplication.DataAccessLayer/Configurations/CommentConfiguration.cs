@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class CommentConfiguration : BaseEntityConfiguration<Comment>
+internal class CommentConfiguration : TenantEntityConfiguration<Comment>
 {
     public override void Configure(EntityTypeBuilder<Comment> builder)
     {

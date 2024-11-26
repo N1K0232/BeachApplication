@@ -12,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ReservationService(IApplicationDbContext db, IUserService userService, IMapper mapper) : IReservationService
+public class ReservationService(IDataContext db, IUserService userService, IMapper mapper) : IReservationService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
@@ -43,7 +43,6 @@ public class ReservationService(IApplicationDbContext db, IUserService userServi
     public async Task<Result<PaginatedList<Reservation>>> GetListAsync(DateOnly? reservationDate, int pageIndex, int itemsPerPage, string orderBy)
     {
         var query = db.GetData<Entities.Reservation>()
-            .Include(r => r.User)
             .Include(r => r.Umbrella)
             .WhereIf(reservationDate.HasValue, r => r.StartOn == reservationDate || r.EndsOn == reservationDate);
 

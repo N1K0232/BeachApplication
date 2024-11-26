@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class CategoryConfiguration : BaseEntityConfiguration<Category>
+internal class CategoryConfiguration : TenantEntityConfiguration<Category>
 {
     public override void Configure(EntityTypeBuilder<Category> builder)
     {

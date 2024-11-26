@@ -2,7 +2,7 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class Category : BaseEntity
+public class Category : TenantEntity
 {
     public string Name { get; set; }
 

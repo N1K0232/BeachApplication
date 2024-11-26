@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class UmbrellaConfiguration : BaseEntityConfiguration<Umbrella>
+internal class UmbrellaConfiguration : TenantEntityConfiguration<Umbrella>
 {
     public override void Configure(EntityTypeBuilder<Umbrella> builder)
     {

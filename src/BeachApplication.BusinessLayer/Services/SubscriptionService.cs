@@ -12,7 +12,7 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class SubscriptionService(IApplicationDbContext db, IUserService userService, IMapper mapper) : ISubscriptionService
+public class SubscriptionService(IDataContext db, IUserService userService, IMapper mapper) : ISubscriptionService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
@@ -40,14 +40,9 @@ public class SubscriptionService(IApplicationDbContext db, IUserService userServ
         return subscription;
     }
 
-    public async Task<Result<PaginatedList<Subscription>>> GetListAsync(string userName)
+    public async Task<Result<PaginatedList<Subscription>>> GetListAsync()
     {
-        var query = db.GetData<Entities.Subscription>().Include(s => s.User).AsQueryable();
-
-        if (userName.HasValue())
-        {
-            query = query.Where(s => s.User.NormalizedUserName.Equals(userName.ToUpperInvariant()));
-        }
+        var query = db.GetData<Entities.Subscription>();
 
         var totalCount = await query.CountAsync();
         var dbSubscriptions = await query.ToListAsync();

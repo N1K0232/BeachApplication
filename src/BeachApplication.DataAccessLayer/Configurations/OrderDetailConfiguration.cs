@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class OrderDetailConfiguration : DeletableEntityConfiguration<OrderDetail>
+internal class OrderDetailConfiguration : TenantEntityConfiguration<OrderDetail>
 {
     public override void Configure(EntityTypeBuilder<OrderDetail> builder)
     {

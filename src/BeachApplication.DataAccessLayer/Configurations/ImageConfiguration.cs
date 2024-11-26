@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BeachApplication.DataAccessLayer.Configurations;
 
-internal class ImageConfiguration : BaseEntityConfiguration<Image>
+internal class ImageConfiguration : TenantEntityConfiguration<Image>
 {
     public override void Configure(EntityTypeBuilder<Image> builder)
     {

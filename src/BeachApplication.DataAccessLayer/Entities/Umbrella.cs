@@ -2,7 +2,7 @@
 
 namespace BeachApplication.DataAccessLayer.Entities;
 
-public class Umbrella : BaseEntity
+public class Umbrella : TenantEntity
 {
     public string Letter { get; set; }
 
