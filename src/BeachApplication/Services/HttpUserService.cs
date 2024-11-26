@@ -16,7 +16,7 @@ public class HttpUserService(UserManager<ApplicationUser> userManager, IHttpCont
 
     public Guid GetTenantId()
     {
-        string tenantHeader = httpContextAccessor.HttpContext.Request.Headers["TenantId"];
+        string tenantHeader = httpContextAccessor.HttpContext?.Request.Headers["TenantId"];
         if (Guid.TryParse(tenantHeader, out var tenantId))
         {
             return tenantId;

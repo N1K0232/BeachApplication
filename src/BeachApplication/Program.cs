@@ -351,7 +351,6 @@ builder.Services.Scan(scan => scan.FromAssemblyOf<IdentityService>()
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 
-builder.Services.AddHostedService<DatabaseService>();
 builder.Services.AddHostedService<IdentityRoleService>();
 builder.Services.AddHostedService<IdentityUserService>();
 
