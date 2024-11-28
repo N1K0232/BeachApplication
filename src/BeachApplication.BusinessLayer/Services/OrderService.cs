@@ -11,11 +11,11 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class OrderService(IDataContext db, IUserService userService, IMapper mapper) : IOrderService
+public class OrderService(IDataContext dataContext, IUserService userService, IMapper mapper) : IOrderService
 {
     public async Task<Result> CancelAsync(Guid id)
     {
-        var dbOrder = await db.GetData<Entities.Order>(trackingChanges: true).Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.Id == id);
+        var dbOrder = await dataContext.GetData<Entities.Order>(trackingChanges: true).Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.Id == id);
         if (dbOrder is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No order found with id {id}");
@@ -23,17 +23,17 @@ public class OrderService(IDataContext db, IUserService userService, IMapper map
 
         if (dbOrder.OrderDetails?.Count > 0)
         {
-            await db.DeleteAsync(dbOrder.OrderDetails);
+            await dataContext.DeleteAsync(dbOrder.OrderDetails);
         }
 
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
         return Result.Ok();
     }
 
     public async Task<Result<Order>> GetAsync()
     {
         var userId = userService.GetUserId();
-        var dbOrder = await db.GetData<Entities.Order>().FirstOrDefaultAsync(o => o.UserId == userId);
+        var dbOrder = await dataContext.GetData<Entities.Order>().FirstOrDefaultAsync(o => o.UserId == userId);
 
         if (dbOrder is null)
         {
@@ -48,7 +48,7 @@ public class OrderService(IDataContext db, IUserService userService, IMapper map
 
     public async Task<Result<PaginatedList<Order>>> GetListAsync(int pageIndex, int itemsPerPage, string orderBy)
     {
-        var query = db.GetData<Entities.Order>();
+        var query = dataContext.GetData<Entities.Order>();
         var totalCount = await query.CountAsync();
 
         var hasNextPage = await query.HasNextPageAsync(pageIndex, itemsPerPage);
@@ -65,7 +65,7 @@ public class OrderService(IDataContext db, IUserService userService, IMapper map
 
     private async Task<IEnumerable<OrderDetail>> GetOrderDetailsAsync(Guid id)
     {
-        var dbOrderDetails = await db.GetData<Entities.OrderDetail>()
+        var dbOrderDetails = await dataContext.GetData<Entities.OrderDetail>()
             .Where(o => o.OrderId == id)
             .ToListAsync();
 

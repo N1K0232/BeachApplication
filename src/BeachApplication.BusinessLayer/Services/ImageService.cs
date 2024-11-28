@@ -12,18 +12,18 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ImageService(IDataContext db, IStorageProvider storageProvider, IMapper mapper) : IImageService
+public class ImageService(IDataContext dataContext, IStorageProvider storageProvider, IMapper mapper) : IImageService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var image = await db.GetAsync<Entities.Image>(id);
+        var image = await dataContext.GetAsync<Entities.Image>(id);
         if (image is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
         }
 
-        await db.DeleteAsync(image);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(image);
+        await dataContext.SaveAsync();
 
         await storageProvider.DeleteAsync(image.Path);
         return Result.Ok();
@@ -31,7 +31,7 @@ public class ImageService(IDataContext db, IStorageProvider storageProvider, IMa
 
     public async Task<Result<Image>> GetAsync(Guid id)
     {
-        var dbImage = await db.GetData<Entities.Image>().FirstOrDefaultAsync(i => i.Id == id);
+        var dbImage = await dataContext.GetData<Entities.Image>().FirstOrDefaultAsync(i => i.Id == id);
         if (dbImage is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
@@ -43,7 +43,7 @@ public class ImageService(IDataContext db, IStorageProvider storageProvider, IMa
 
     public async Task<Result<PaginatedList<Image>>> GetListAsync()
     {
-        var query = db.GetData<Entities.Image>();
+        var query = dataContext.GetData<Entities.Image>();
         var totalCount = await query.CountAsync();
 
         var dbImages = await query.OrderBy(i => i.Path).ToListAsync();
@@ -54,17 +54,19 @@ public class ImageService(IDataContext db, IStorageProvider storageProvider, IMa
 
     public async Task<Result<StreamFileContent>> ReadAsync(Guid id)
     {
-        var image = await db.GetAsync<Entities.Image>(id);
-        if (image is not null)
+        var image = await dataContext.GetAsync<Entities.Image>(id);
+        if (image is null)
         {
-            var stream = await storageProvider.ReadAsStreamAsync(image.Path);
-            if (stream is not null)
-            {
-                return new StreamFileContent(stream, image.ContentType);
-            }
+            return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
         }
 
-        return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Image, id));
+        var stream = await storageProvider.ReadAsStreamAsync(image.Path);
+        if (stream is null)
+        {
+            return Result.Fail(FailureReasons.ItemNotFound, "No image found");
+        }
+
+        return new StreamFileContent(stream, image.ContentType);
     }
 
     public async Task<Result<Image>> UploadAsync(Stream stream, string fileName)
@@ -72,16 +74,17 @@ public class ImageService(IDataContext db, IStorageProvider storageProvider, IMa
         var path = PathGenerator.CreatePath(fileName);
         await storageProvider.SaveAsync(stream, path);
 
-        var image = new Entities.Image
+        var dbImage = new Entities.Image
         {
             Path = path,
             Length = stream.Length,
             ContentType = MimeUtility.GetMimeMapping(fileName)
         };
 
-        await db.InsertAsync(image);
-        await db.SaveAsync();
+        await dataContext.InsertAsync(dbImage);
+        await dataContext.SaveAsync();
 
-        return mapper.Map<Image>(image);
+        var image = mapper.Map<Image>(dbImage);
+        return image;
     }
 }

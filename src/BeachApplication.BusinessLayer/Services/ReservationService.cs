@@ -12,25 +12,25 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class ReservationService(IDataContext db, IUserService userService, IMapper mapper) : IReservationService
+public class ReservationService(IDataContext dataContext, IUserService userService, IMapper mapper) : IReservationService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var dbReservation = await db.GetData<Entities.Reservation>(trackingChanges: true).FirstOrDefaultAsync(u => u.Id == id);
+        var dbReservation = await dataContext.GetData<Entities.Reservation>(trackingChanges: true).FirstOrDefaultAsync(u => u.Id == id);
         if (dbReservation is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No reservation found with id {id}");
         }
 
-        await db.DeleteAsync(dbReservation);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(dbReservation);
+        await dataContext.SaveAsync();
 
         return Result.Ok();
     }
 
     public async Task<Result<Reservation>> GetAsync(Guid id)
     {
-        var dbReservation = await db.GetAsync<Entities.Reservation>(id);
+        var dbReservation = await dataContext.GetAsync<Entities.Reservation>(id);
         if (dbReservation is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No reservation found with id {id}");
@@ -42,7 +42,7 @@ public class ReservationService(IDataContext db, IUserService userService, IMapp
 
     public async Task<Result<PaginatedList<Reservation>>> GetListAsync(DateOnly? reservationDate, int pageIndex, int itemsPerPage, string orderBy)
     {
-        var query = db.GetData<Entities.Reservation>()
+        var query = dataContext.GetData<Entities.Reservation>()
             .Include(r => r.Umbrella)
             .WhereIf(reservationDate.HasValue, r => r.StartOn == reservationDate || r.EndsOn == reservationDate);
 
@@ -78,9 +78,9 @@ public class ReservationService(IDataContext db, IUserService userService, IMapp
         dbReservation.UserId = userService.GetUserId();
 
         umbrella.IsBusy = true;
-        await db.InsertAsync(dbReservation);
+        await dataContext.InsertAsync(dbReservation);
 
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
         return mapper.Map<Reservation>(dbReservation);
     }
 
@@ -97,7 +97,7 @@ public class ReservationService(IDataContext db, IUserService userService, IMapp
             return Result.Fail(FailureReasons.ClientError, "Sorry but this umbrella is already taken");
         }
 
-        var dbReservation = await db.GetData<Entities.Reservation>(trackingChanges: true).FirstOrDefaultAsync(r => r.Id == id);
+        var dbReservation = await dataContext.GetData<Entities.Reservation>(trackingChanges: true).FirstOrDefaultAsync(r => r.Id == id);
         if (dbReservation is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No reservation found with id {id}");
@@ -106,13 +106,13 @@ public class ReservationService(IDataContext db, IUserService userService, IMapp
         dbReservation.UserId = userService.GetUserId();
         mapper.Map(request, dbReservation);
 
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
         return mapper.Map<Reservation>(dbReservation);
     }
 
     private async Task<Entities.Umbrella> GetUmbrellaAsync(char letter, int number)
     {
-        var umbrella = await db.GetData<Entities.Umbrella>(trackingChanges: true)
+        var umbrella = await dataContext.GetData<Entities.Umbrella>(trackingChanges: true)
             .FirstOrDefaultAsync(u => u.Letter == letter.ToString() && u.Number == number);
 
         return umbrella;
@@ -120,7 +120,7 @@ public class ReservationService(IDataContext db, IUserService userService, IMapp
 
     private async Task<bool> ReservationExistsAsync(SaveReservationRequest request)
     {
-        var query = db.GetData<Entities.Reservation>();
+        var query = dataContext.GetData<Entities.Reservation>();
         var userId = userService.GetUserId();
 
         var exists = await query.AnyAsync(r => r.UserId == userId && r.StartAt == request.StartAt &&

@@ -12,25 +12,25 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CategoryService(IDataContext db, IMapper mapper) : ICategoryService
+public class CategoryService(IDataContext dataContext, IMapper mapper) : ICategoryService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var dbCategory = await db.GetAsync<Entities.Category>(id);
+        var dbCategory = await dataContext.GetAsync<Entities.Category>(id);
         if (dbCategory is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
         }
 
-        await db.DeleteAsync(dbCategory);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(dbCategory);
+        await dataContext.SaveAsync();
 
         return Result.Ok();
     }
 
     public async Task<Result<Category>> GetAsync(Guid id)
     {
-        var dbCategory = await db.GetAsync<Entities.Category>(id);
+        var dbCategory = await dataContext.GetAsync<Entities.Category>(id);
         if (dbCategory is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
@@ -42,7 +42,7 @@ public class CategoryService(IDataContext db, IMapper mapper) : ICategoryService
 
     public async Task<Result<IEnumerable<Category>>> GetListAsync(string name)
     {
-        var query = db.GetData<Entities.Category>();
+        var query = dataContext.GetData<Entities.Category>();
 
         if (name.HasValue())
         {
@@ -58,7 +58,7 @@ public class CategoryService(IDataContext db, IMapper mapper) : ICategoryService
 
     public async Task<Result<Category>> InsertAsync(SaveCategoryRequest request)
     {
-        var query = db.GetData<Entities.Category>();
+        var query = dataContext.GetData<Entities.Category>();
         var exists = await query.AnyAsync(c => c.Name == request.Name && c.Description == request.Description);
 
         if (exists)
@@ -67,21 +67,21 @@ public class CategoryService(IDataContext db, IMapper mapper) : ICategoryService
         }
 
         var dbCategory = mapper.Map<Entities.Category>(request);
-        await db.InsertAsync(dbCategory);
+        await dataContext.InsertAsync(dbCategory);
 
         return mapper.Map<Category>(dbCategory);
     }
 
     public async Task<Result<Category>> UpdateAsync(Guid id, SaveCategoryRequest request)
     {
-        var dbCategory = await db.GetData<Entities.Category>(trackingChanges: true).FirstOrDefaultAsync(c => c.Id == id);
+        var dbCategory = await dataContext.GetData<Entities.Category>(trackingChanges: true).FirstOrDefaultAsync(c => c.Id == id);
         if (dbCategory is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, EntityNames.Category, id));
         }
 
         mapper.Map(request, dbCategory);
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
 
         return mapper.Map<Category>(dbCategory);
     }

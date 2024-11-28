@@ -12,11 +12,11 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class CartService(IDataContext db, IUserService userService, IMapper mapper) : ICartService
+public class CartService(IDataContext dataContext, IUserService userService, IMapper mapper) : ICartService
 {
     public async Task<Result<Order>> ConfirmAsync(Guid id)
     {
-        var cart = await db.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.Id == id);
+        var cart = await dataContext.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.Id == id);
         if (cart is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No cart found with id {id}");
@@ -28,7 +28,7 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
         }
 
         var orderId = await CreateOrderAsync();
-        var dbOrder = await db.GetData<Entities.Order>().Include(o => o.OrderDetails).FirstAsync(o => o.Id == id);
+        var dbOrder = await dataContext.GetData<Entities.Order>().Include(o => o.OrderDetails).FirstAsync(o => o.Id == id);
 
         dbOrder.OrderDetails ??= [];
         foreach (var item in cart.Items)
@@ -43,13 +43,13 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
             dbOrder.OrderDetails.Add(orderDetail);
         }
 
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
         return mapper.Map<Order>(dbOrder);
     }
 
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var dbCart = await db.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.Id == id);
+        var dbCart = await dataContext.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.Id == id);
         if (dbCart is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No cart found with id {id}");
@@ -57,11 +57,11 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
 
         if (dbCart.Items.Count > 0)
         {
-            await db.DeleteAsync(dbCart.Items);
+            await dataContext.DeleteAsync(dbCart.Items);
         }
 
-        await db.DeleteAsync(dbCart);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(dbCart);
+        await dataContext.SaveAsync();
 
         return Result.Ok();
     }
@@ -69,7 +69,7 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
     public async Task<Result<Cart>> GetAsync()
     {
         var userId = userService.GetUserId();
-        var dbCart = await db.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.UserId == userId);
+        var dbCart = await dataContext.GetData<Entities.Cart>().Include(c => c.Items).FirstOrDefaultAsync(c => c.UserId == userId);
 
         if (dbCart is null)
         {
@@ -82,14 +82,14 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
 
     public async Task<Result> RemoveItemAsync(Guid id, Guid itemId)
     {
-        var item = await db.GetData<Entities.CartItem>().FirstOrDefaultAsync(c => c.CartId == id && c.Id == itemId);
+        var item = await dataContext.GetData<Entities.CartItem>().FirstOrDefaultAsync(c => c.CartId == id && c.Id == itemId);
         if (item is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No item found with id {id}");
         }
 
-        await db.DeleteAsync(item);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(item);
+        await dataContext.SaveAsync();
 
         return Result.Ok();
     }
@@ -97,7 +97,7 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
     public async Task<Result<Cart>> SaveAsync(SaveCartRequest request)
     {
         var cart = await GetOrCreateCartAsync(request.Id);
-        var product = await db.GetData<Entities.Product>().FirstOrDefaultAsync(p => p.Id == request.ProductId);
+        var product = await dataContext.GetData<Entities.Product>().FirstOrDefaultAsync(p => p.Id == request.ProductId);
 
         if (product is null)
         {
@@ -122,8 +122,8 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
             }
         }
 
-        await db.InsertAsync(dbCartItem);
-        await db.SaveAsync();
+        await dataContext.InsertAsync(dbCartItem);
+        await dataContext.SaveAsync();
 
         var cartItem = mapper.Map<CartItem>(dbCartItem);
         cart.Items.Add(cartItem);
@@ -133,7 +133,7 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
 
     private async Task<Cart> GetOrCreateCartAsync(Guid id)
     {
-        var dbCart = await db.GetData<Entities.Cart>().FirstOrDefaultAsync(c => c.Id == id);
+        var dbCart = await dataContext.GetData<Entities.Cart>().FirstOrDefaultAsync(c => c.Id == id);
         if (dbCart is null)
         {
             dbCart = new Entities.Cart
@@ -142,8 +142,8 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
                 UserId = userService.GetUserId()
             };
 
-            await db.InsertAsync(dbCart);
-            await db.SaveAsync();
+            await dataContext.InsertAsync(dbCart);
+            await dataContext.SaveAsync();
         }
 
         var cart = mapper.Map<Cart>(dbCart);
@@ -162,8 +162,8 @@ public class CartService(IDataContext db, IUserService userService, IMapper mapp
             Status = OrderStatus.New
         };
 
-        await db.InsertAsync(dbOrder);
-        await db.SaveAsync();
+        await dataContext.InsertAsync(dbOrder);
+        await dataContext.SaveAsync();
 
         return dbOrder.Id;
     }

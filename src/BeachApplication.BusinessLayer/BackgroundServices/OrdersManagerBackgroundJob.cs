@@ -6,18 +6,11 @@ using TinyHelpers.Extensions;
 
 namespace BeachApplication.BusinessLayer.BackgroundServices;
 
-public class OrdersManagerBackgroundJob : IJob
+public class OrdersManagerBackgroundJob(DataContext dataContext) : IJob
 {
-    private readonly DataContext applicationDbContext;
-
-    public OrdersManagerBackgroundJob(DataContext applicationDbContext)
-    {
-        this.applicationDbContext = applicationDbContext;
-    }
-
     public async Task Execute(IJobExecutionContext context)
     {
-        var orders = await applicationDbContext.GetData<Order>(ignoreQueryFilters: true)
+        var orders = await dataContext.GetData<Order>(ignoreQueryFilters: true)
             .Include(o => o.OrderDetails)
             .Where(o => o.OrderDate < DateTime.UtcNow.ToDateOnly())
             .ToListAsync(context.CancellationToken);
@@ -26,14 +19,14 @@ public class OrdersManagerBackgroundJob : IJob
         {
             if (order.OrderDetails?.Count > 0)
             {
-                applicationDbContext.Set<OrderDetail>().RemoveRange(order.OrderDetails);
+                dataContext.Set<OrderDetail>().RemoveRange(order.OrderDetails);
             }
         }
 
         // by not calling the SaveAsync method i will avoid to set the query filters rule
         // this avoids to still have all the orders in the database
 
-        applicationDbContext.Set<Order>().RemoveRange(orders);
-        await applicationDbContext.SaveChangesAsync(context.CancellationToken);
+        dataContext.Set<Order>().RemoveRange(orders);
+        await dataContext.SaveChangesAsync(context.CancellationToken);
     }
 }

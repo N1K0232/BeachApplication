@@ -12,25 +12,25 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class SubscriptionService(IDataContext db, IUserService userService, IMapper mapper) : ISubscriptionService
+public class SubscriptionService(IDataContext dataContext, IUserService userService, IMapper mapper) : ISubscriptionService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var dbSubscription = await db.GetData<Entities.Subscription>(trackingChanges: true).FirstOrDefaultAsync(s => s.Id == id);
+        var dbSubscription = await dataContext.GetData<Entities.Subscription>(trackingChanges: true).FirstOrDefaultAsync(s => s.Id == id);
         if (dbSubscription is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, "Subscription", id));
         }
 
-        await db.DeleteAsync(dbSubscription);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(dbSubscription);
+        await dataContext.SaveAsync();
 
         return Result.Ok();
     }
 
     public async Task<Result<Subscription>> GetAsync(Guid id)
     {
-        var dbSubscription = await db.GetAsync<Entities.Subscription>(id);
+        var dbSubscription = await dataContext.GetAsync<Entities.Subscription>(id);
         if (dbSubscription is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, "Subscription", id));
@@ -42,7 +42,7 @@ public class SubscriptionService(IDataContext db, IUserService userService, IMap
 
     public async Task<Result<PaginatedList<Subscription>>> GetListAsync()
     {
-        var query = db.GetData<Entities.Subscription>();
+        var query = dataContext.GetData<Entities.Subscription>();
 
         var totalCount = await query.CountAsync();
         var dbSubscriptions = await query.ToListAsync();
@@ -56,22 +56,22 @@ public class SubscriptionService(IDataContext db, IUserService userService, IMap
         var dbSubscription = mapper.Map<Entities.Subscription>(request);
         dbSubscription.UserId = userService.GetUserId();
 
-        await db.InsertAsync(dbSubscription);
-        await db.SaveAsync();
+        await dataContext.InsertAsync(dbSubscription);
+        await dataContext.SaveAsync();
 
         return mapper.Map<Subscription>(dbSubscription);
     }
 
     public async Task<Result<Subscription>> UpdateAsync(Guid id, SaveSubscriptionRequest request)
     {
-        var dbSubscription = await db.GetData<Entities.Subscription>(trackingChanges: true).FirstOrDefaultAsync(s => s.Id == id);
+        var dbSubscription = await dataContext.GetData<Entities.Subscription>(trackingChanges: true).FirstOrDefaultAsync(s => s.Id == id);
         if (dbSubscription is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, string.Format(ErrorMessages.ItemNotFound, "Subscription", id));
         }
 
         mapper.Map(request, dbSubscription);
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
 
         return mapper.Map<Subscription>(dbSubscription);
     }

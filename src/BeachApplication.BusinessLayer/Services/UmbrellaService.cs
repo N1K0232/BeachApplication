@@ -10,11 +10,11 @@ using Entities = BeachApplication.DataAccessLayer.Entities;
 
 namespace BeachApplication.BusinessLayer.Services;
 
-public class UmbrellaService(IDataContext db, IMapper mapper) : IUmbrellaService
+public class UmbrellaService(IDataContext dataContext, IMapper mapper) : IUmbrellaService
 {
     public async Task<Result> DeleteAsync(Guid id)
     {
-        var dbUmbrella = await db.GetData<Entities.Umbrella>().Include(u => u.Reservations).FirstOrDefaultAsync(u => u.Id == id);
+        var dbUmbrella = await dataContext.GetData<Entities.Umbrella>().Include(u => u.Reservations).FirstOrDefaultAsync(u => u.Id == id);
         if (dbUmbrella is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No umbrella found with id {id}");
@@ -25,15 +25,15 @@ public class UmbrellaService(IDataContext db, IMapper mapper) : IUmbrellaService
             return Result.Fail(FailureReasons.ClientError, "Cannot delete this umbrella because it just belongs to a reservation");
         }
 
-        await db.DeleteAsync(dbUmbrella);
-        await db.SaveAsync();
+        await dataContext.DeleteAsync(dbUmbrella);
+        await dataContext.SaveAsync();
 
         return Result.Ok();
     }
 
     public async Task<Result<Umbrella>> GetAsync(Guid id)
     {
-        var dbUmbrella = await db.GetAsync<Entities.Umbrella>(id);
+        var dbUmbrella = await dataContext.GetAsync<Entities.Umbrella>(id);
         if (dbUmbrella is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No umbrella found with id {id}");
@@ -45,7 +45,7 @@ public class UmbrellaService(IDataContext db, IMapper mapper) : IUmbrellaService
 
     public async Task<Result<PaginatedList<Umbrella>>> GetListAsync(char? letter, int pageIndex, int itemsPerPage)
     {
-        var query = db.GetData<Entities.Umbrella>().WhereIf(letter.HasValue, u => u.Letter == letter.Value.ToString());
+        var query = dataContext.GetData<Entities.Umbrella>().WhereIf(letter.HasValue, u => u.Letter == letter.Value.ToString());
         var totalCount = await query.CountAsync();
 
         var dbUmbrellas = await query.OrderBy(u => u.Number).ToListAsync(pageIndex, itemsPerPage);
@@ -57,36 +57,36 @@ public class UmbrellaService(IDataContext db, IMapper mapper) : IUmbrellaService
 
     public async Task<Result<Umbrella>> InsertAsync(SaveUmbrellaRequest request)
     {
-        var exists = await db.GetData<Entities.Umbrella>().AnyAsync(u => u.Letter == request.Letter.ToString() && u.Number == request.Number);
+        var exists = await dataContext.GetData<Entities.Umbrella>().AnyAsync(u => u.Letter == request.Letter.ToString() && u.Number == request.Number);
         if (exists)
         {
             return Result.Fail(FailureReasons.Conflict, "This umbrella already exists");
         }
 
         var dbUmbrella = mapper.Map<Entities.Umbrella>(request);
-        await db.InsertAsync(dbUmbrella);
+        await dataContext.InsertAsync(dbUmbrella);
 
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
         return mapper.Map<Umbrella>(dbUmbrella);
     }
 
     public async Task<Result<Umbrella>> UpdateAsync(Guid id, SaveUmbrellaRequest request)
     {
-        var dbUmbrella = await db.GetData<Entities.Umbrella>(trackingChanges: true).FirstOrDefaultAsync(u => u.Id == id);
+        var dbUmbrella = await dataContext.GetData<Entities.Umbrella>(trackingChanges: true).FirstOrDefaultAsync(u => u.Id == id);
         if (dbUmbrella is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No umbrella found with id {id}");
         }
 
         mapper.Map(request, dbUmbrella);
-        await db.SaveAsync();
+        await dataContext.SaveAsync();
 
         return mapper.Map<Umbrella>(dbUmbrella);
     }
 
     public async Task<Result> UpdateStatusAsync(ChangeUmbrellaStatusRequest request)
     {
-        var dbUmbrella = await db.GetData<Entities.Umbrella>(trackingChanges: true).FirstOrDefaultAsync(u => u.Id == request.Id);
+        var dbUmbrella = await dataContext.GetData<Entities.Umbrella>(trackingChanges: true).FirstOrDefaultAsync(u => u.Id == request.Id);
         if (dbUmbrella is null)
         {
             return Result.Fail(FailureReasons.ItemNotFound, $"No umbrella found with id {request.Id}");
@@ -95,7 +95,7 @@ public class UmbrellaService(IDataContext db, IMapper mapper) : IUmbrellaService
         if (dbUmbrella.IsBusy != request.IsBusy)
         {
             dbUmbrella.IsBusy = request.IsBusy;
-            await db.SaveAsync();
+            await dataContext.SaveAsync();
         }
 
         return Result.Ok();
